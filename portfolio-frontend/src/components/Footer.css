@@ -1,0 +1,171 @@
+.footer {
+  background-color: #000000;
+  color: #ffffff;
+  padding: 60px 40px 20px;
+  margin-top: 80px;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 1fr;
+  gap: 60px;
+  margin-bottom: 40px;
+}
+
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.footer-logo img {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 0;
+}
+
+.footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  /* 对齐Quick links的home和SCAN to ADD的图片顶部 */
+  /* footer-title高度约36px (16px字体 + 20px margin-bottom) */
+  /* 让联系信息与title下方的内容对齐 */
+  margin-top: 36px; /* 等于footer-title的高度，使联系信息与Quick links的home对齐 */
+  padding-top: 0;
+}
+
+.contact-item {
+  display: flex;
+  align-items: flex-start; /* icon与文案顶部对齐 */
+  gap: 10px;
+  font-size: 14px;
+}
+
+.contact-item span:last-child {
+  line-height: 1.4;
+}
+
+.contact-icon {
+  font-size: 16px;
+  line-height: 1.4; /* 确保icon与文字顶部对齐 */
+  margin-top: 0;
+  flex-shrink: 0; /* 防止icon被压缩 */
+}
+
+.footer-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  margin-top: 0;
+  text-transform: uppercase;
+  line-height: 1.2;
+  height: 36px; /* 固定高度，确保对齐 */
+  display: flex;
+  align-items: center;
+}
+
+.footer-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-links a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: opacity 0.3s;
+}
+
+.footer-links a:hover {
+  opacity: 0.7;
+}
+
+.footer-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.gallery-placeholder {
+  aspect-ratio: 1;
+  background-color: #333;
+  border-radius: 4px;
+}
+
+.footer-qr-codes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.qr-code-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.qr-code-item img {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.qr-code-item span {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.social-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-icon {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: opacity 0.3s;
+}
+
+.social-icon:hover {
+  opacity: 0.7;
+}
+
+.footer-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: 30px;
+  border-top: 1px solid #333;
+  text-align: center;
+  font-size: 14px;
+  color: #999;
+}
+
+@media (max-width: 1024px) {
+  .footer-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer {
+    padding: 40px 20px 20px;
+  }
+
+  .footer-container {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+}
+
+

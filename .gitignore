@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.log
+portfolio-backend/portfolio.db
+portfolio-backend/uploads/*
+!portfolio-backend/uploads/.gitkeep
+dist/
+build/
+
+

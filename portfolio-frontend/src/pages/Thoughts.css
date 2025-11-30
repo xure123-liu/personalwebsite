@@ -1,0 +1,67 @@
+.thoughts-page {
+  padding-top: 120px;
+  min-height: 80vh;
+}
+
+.thoughts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.thought-card {
+  background-color: #111;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s;
+}
+
+.thought-card:hover {
+  transform: translateY(-5px);
+}
+
+.thought-card img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+.thought-content {
+  padding: 30px;
+}
+
+.thought-content h3 {
+  font-size: 24px;
+  margin-bottom: 15px;
+}
+
+.thought-content p {
+  color: #ccc;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+.thought-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 15px;
+}
+
+.thought-link {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .thoughts-page {
+    padding-top: 100px;
+  }
+
+  .thoughts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+

@@ -1,0 +1,15 @@
+.admin {
+  min-height: 100vh;
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.admin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 18px;
+}
+
+

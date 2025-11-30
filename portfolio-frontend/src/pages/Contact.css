@@ -1,0 +1,164 @@
+.contact-page {
+  padding-top: 80px; /* 缩小顶部间距 */
+  min-height: 80vh;
+}
+
+.contact-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px; /* 缩小左右间距 */
+  margin-top: 30px; /* 缩小顶部间距 */
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 30px; /* 缩小联系信息之间的间距 */
+}
+
+.contact-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* 所有联系项整体左对齐 */
+  text-align: left;
+}
+
+.contact-item-email {
+  width: 100%; /* 确保 Email 区块占满宽度，以便内部居中 */
+}
+
+.email-row {
+  display: flex;
+  align-items: center; /* Email 标签和地址垂直居中对齐 */
+  justify-content: flex-start; /* Email 标签和地址左对齐，与 WeChat、QQ 对齐 */
+  gap: 10px; /* Email 标签和地址之间的间距 */
+  width: 100%; /* 占满父容器宽度 */
+}
+
+.email-row h3 {
+  font-size: 24px;
+  margin: 0; /* 移除默认的 margin-bottom */
+  font-weight: 600;
+}
+
+.contact-item-left {
+  align-items: flex-start; /* WeChat 和 QQ 左对齐 */
+  text-align: left;
+}
+
+.contact-item h3 {
+  font-size: 24px;
+  margin-bottom: 15px; /* 缩小标题下方间距 */
+}
+
+.contact-item a {
+  color: #ffffff;
+  text-decoration: underline;
+  font-size: 18px;
+}
+
+.contact-item img {
+  max-width: 200px;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 0; /* 确保图片紧跟在标题下方 */
+}
+
+.contact-form-container {
+  background-color: #ffffff;
+  color: #000000;
+  padding: 35px; /* 缩小内边距 */
+  border-radius: 8px;
+}
+
+.contact-form-container h3 {
+  font-size: 32px;
+  margin-bottom: 8px; /* 缩小标题下方间距 */
+}
+
+.form-subtitle {
+  color: #666;
+  margin-bottom: 20px; /* 缩小副标题下方间距 */
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* 缩小表单项之间的间距 */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* 缩小label和input之间的间距 */
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #000000;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  color: #000000;
+  background-color: #ffffff;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #999;
+}
+
+.submit-button {
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  padding: 12px 35px; /* 缩小按钮内边距 */
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  margin-top: 5px; /* 缩小按钮上方间距 */
+  transition: all 0.3s;
+}
+
+.submit-button:hover {
+  background-color: #333;
+}
+
+.submit-status {
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.submit-status.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.submit-status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+@media (max-width: 1024px) {
+  .contact-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .contact-page {
+    padding-top: 100px;
+  }
+
+  .contact-form-container {
+    padding: 30px 20px;
+  }
+}
+
+
