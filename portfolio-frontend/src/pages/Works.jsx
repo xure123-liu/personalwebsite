@@ -1,14 +1,26 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/config';
 import './Works.css';
 
 const Works = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { t, language } = useLanguage();
   const [works, setWorks] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const categories = ['All', '交易类', '直播类', '游戏类', '工具类', '系统类'];
+  // 根据语言设置分类
+  const categories = language === 'zh' 
+    ? ['All', '交易类', '直播类', '游戏类', '工具类', '系统类']
+    : ['All', 'Trading', 'Live Streaming', 'Game', 'Tool', 'System'];
+
+  // 页面加载时滚动到顶部
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [location.pathname]);
 
   useEffect(() => {
     loadWorks();
@@ -26,7 +38,7 @@ const Works = () => {
   return (
     <div className="works-page">
       <div className="container">
-        <h1 className="page-title">My Works</h1>
+        <h1 className="page-title">{t('works.title')}</h1>
         <div className="category-tabs">
           {categories.map(category => (
             <button
@@ -34,7 +46,7 @@ const Works = () => {
               className={`category-tab ${selectedCategory === category ? 'active' : ''}`}
               onClick={() => setSelectedCategory(category)}
             >
-              {category}
+              {category === 'All' ? t('home.all') : category}
             </button>
           ))}
         </div>
@@ -47,7 +59,7 @@ const Works = () => {
               style={{ cursor: 'pointer' }}
             >
               {work.image ? (
-                <img src={`http://localhost:3002${work.image}`} alt={work.name} />
+                <img src={getImageUrl(work.image)} alt={work.name} />
               ) : (
                 <div className="work-placeholder"></div>
               )}
@@ -60,7 +72,7 @@ const Works = () => {
         </div>
         {works.length === 0 && (
           <div className="empty-state">
-            <p>暂无作品</p>
+            <p>{t('works.noWorks')}</p>
           </div>
         )}
       </div>

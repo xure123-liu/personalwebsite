@@ -2,7 +2,7 @@
   min-height: 100vh;
   background-color: #000;
   color: #fff;
-  padding: 120px 40px 60px;
+  padding: 140px 40px 60px; /* 增加顶部间距，确保标题不被导航栏遮挡 */
 }
 
 .thought-detail-container {
@@ -12,6 +12,10 @@
 
 .thought-detail-header {
   margin-bottom: 40px;
+}
+
+.thought-detail-header {
+  scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
 .thought-detail-header h1 {
@@ -63,7 +67,11 @@
 
 @media (max-width: 768px) {
   .thought-detail {
-    padding: 100px 20px 40px;
+    padding: 120px 20px 40px; /* 移动端也保持足够的顶部间距 */
+  }
+
+  .thought-detail-header {
+    scroll-margin-top: 120px; /* 移动端调整 scroll-margin */
   }
 
   .thought-detail-header h1 {

@@ -1,0 +1,19 @@
+# Render 配置文件（可选）
+# 如果使用 Render，可以创建这个文件来简化配置
+
+services:
+  - type: web
+    name: portfolio-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+    disk:
+      name: portfolio-data
+      mountPath: /opt/render/project/src
+      sizeGB: 1
+

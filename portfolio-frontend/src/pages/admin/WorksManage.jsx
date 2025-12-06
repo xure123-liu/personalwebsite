@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminNav from './AdminNav';
 import api from '../../services/api';
+import { getImageUrl } from '../../utils/config';
 import './Manage.css';
 
 const WorksManage = ({ onLogout }) => {
@@ -79,6 +80,48 @@ const WorksManage = ({ onLogout }) => {
     setImagesPreview(newPreviews);
   };
 
+  // 拖拽排序相关
+  const [draggedIndex, setDraggedIndex] = useState(null);
+
+  const handleDragStart = (index) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    // 重新排序图片数组
+    const newImages = [...formData.images];
+    const newPreviews = [...imagesPreview];
+    
+    const draggedImage = newImages[draggedIndex];
+    const draggedPreview = newPreviews[draggedIndex];
+    
+    // 移除拖拽的元素
+    newImages.splice(draggedIndex, 1);
+    newPreviews.splice(draggedIndex, 1);
+    
+    // 在目标位置插入
+    newImages.splice(dropIndex, 0, draggedImage);
+    newPreviews.splice(dropIndex, 0, draggedPreview);
+    
+    setFormData({ ...formData, images: newImages });
+    setImagesPreview(newPreviews);
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   const handleEdit = (work) => {
     setEditing(work.id);
     const images = work.images ? (typeof work.images === 'string' ? JSON.parse(work.images) : work.images) : [];
@@ -92,11 +135,11 @@ const WorksManage = ({ onLogout }) => {
       sort_order: work.sort_order || 0
     });
     if (work.image) {
-      setImagePreview(`http://localhost:3002${work.image}`);
+      setImagePreview(getImageUrl(work.image));
     } else {
       setImagePreview('');
     }
-    setImagesPreview(images.map(img => `http://localhost:3002${img}`));
+    setImagesPreview(images.map(img => getImageUrl(img)));
   };
 
   const handleCancel = () => {
@@ -254,7 +297,16 @@ const WorksManage = ({ onLogout }) => {
             />
             <div className="about-images-preview">
               {imagesPreview.map((preview, index) => (
-                <div key={index} className="image-preview-item">
+                <div 
+                  key={index} 
+                  className={`image-preview-item ${draggedIndex === index ? 'dragging' : ''}`}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="drag-handle">⋮⋮</div>
                   <img src={preview} alt={`Preview ${index}`} />
                   <button
                     type="button"
@@ -263,9 +315,15 @@ const WorksManage = ({ onLogout }) => {
                   >
                     ×
                   </button>
+                  <div className="image-order">{index + 1}</div>
                 </div>
               ))}
             </div>
+            {imagesPreview.length > 0 && (
+              <p style={{ marginTop: '10px', color: '#666', fontSize: '14px' }}>
+                提示：可以拖拽图片调整顺序
+              </p>
+            )}
           </div>
           <div className="form-group">
             <label>分类</label>
@@ -321,7 +379,7 @@ const WorksManage = ({ onLogout }) => {
                     <td>{work.category}</td>
                     <td>
                       {work.image && (
-                        <img src={`http://localhost:3002${work.image}`} alt={work.name} className="table-image" />
+                        <img src={getImageUrl(work.image)} alt={work.name} className="table-image" />
                       )}
                     </td>
                     <td>

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/config';
 import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [works, setWorks] = useState([]);
   const [thoughts, setThoughts] = useState([]);
@@ -13,7 +16,10 @@ const Home = () => {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const categories = ['All', '交易类', '直播类', '游戏类', '工具类', '系统类'];
+  // 根据语言设置分类
+  const categories = language === 'zh' 
+    ? ['All', '交易类', '直播类', '游戏类', '工具类', '系统类']
+    : ['All', 'Trading', 'Live Streaming', 'Game', 'Tool', 'System'];
 
   // About me图片轮播
   useEffect(() => {
@@ -61,23 +67,23 @@ const Home = () => {
     setSubmitStatus(null);
 
     if (!messageForm.name || !messageForm.email || !messageForm.message) {
-      setSubmitStatus({ type: 'error', message: '请填写所有必填字段' });
+      setSubmitStatus({ type: 'error', message: t('home.fillAllFields') });
       return;
     }
 
     if (!messageForm.email.includes('@') || !messageForm.email.includes('.')) {
-      setSubmitStatus({ type: 'error', message: '邮箱格式不正确' });
+      setSubmitStatus({ type: 'error', message: t('home.invalidEmail') });
       return;
     }
 
     try {
       await api.createMessage(messageForm);
-      setSubmitStatus({ type: 'success', message: '留言提交成功！' });
+      setSubmitStatus({ type: 'success', message: t('home.submitSuccess') });
       setMessageForm({ name: '', email: '', message: '' });
     } catch (error) {
       setSubmitStatus({ 
         type: 'error', 
-        message: error.response?.data?.error || '提交失败，请稍后重试' 
+        message: error.response?.data?.error || t('home.submitFailed')
       });
     }
   };
@@ -85,7 +91,10 @@ const Home = () => {
   const scrollToWorks = () => {
     const element = document.getElementById('works');
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
     }
   };
 
@@ -96,18 +105,18 @@ const Home = () => {
         <div className="hero-content">
           <div className="hero-avatar">
             {profile?.avatar ? (
-              <img src={`http://localhost:3002${profile.avatar}`} alt="Avatar" />
+              <img src={getImageUrl(profile.avatar)} alt="Avatar" />
             ) : (
               <div className="avatar-placeholder"></div>
             )}
           </div>
-          <h1 className="hero-greeting">Hi, I'm {profile?.name || 'Xure'}</h1>
+          <h1 className="hero-greeting">{t('home.greeting')} {profile?.name || 'Xure'}</h1>
           <h2 className="hero-title">{profile?.main_title || 'Building digital photos, brands and memories'}</h2>
           <p className="hero-description">
             {profile?.hero_description || ''}
           </p>
           <button className="hero-button" onClick={scrollToWorks}>
-            MORE DETAILS
+            {t('home.moreDetails')}
           </button>
           <button className="hero-arrow" onClick={scrollToWorks}>
             ↓
@@ -118,7 +127,7 @@ const Home = () => {
       {/* About Me Section */}
       <section id="about" className="about">
         <div className="container">
-          <h2 className="section-title">About Me</h2>
+          <h2 className="section-title">{t('home.aboutMe')}</h2>
           <h3 className="section-subtitle">{profile?.sub_title || 'Nature itself inspires me'}</h3>
           <div className="about-content">
             <div className="about-image">
@@ -135,7 +144,7 @@ const Home = () => {
                     return (
                       <div className="image-carousel">
                         <img 
-                          src={`http://localhost:3002${currentImage}`} 
+                          src={getImageUrl(currentImage)} 
                           alt="About" 
                           key={currentImageIndex}
                           className="carousel-image"
@@ -165,7 +174,7 @@ const Home = () => {
               <p>{profile?.about_description || ''}</p>
               {profile?.skills && (
                 <div className="skills">
-                  <h4>Skills:</h4>
+                  <h4>{t('home.skills')}</h4>
                   <p>{profile.skills}</p>
                 </div>
               )}
@@ -177,7 +186,7 @@ const Home = () => {
       {/* My Latest Works Section */}
       <section id="works" className="works">
         <div className="container">
-          <h2 className="section-title">My latest works</h2>
+          <h2 className="section-title">{t('home.myLatestWorks')}</h2>
           <div className="category-tabs">
             {categories.map(category => (
               <button
@@ -185,7 +194,7 @@ const Home = () => {
                 className={`category-tab ${selectedCategory === category ? 'active' : ''}`}
                 onClick={() => setSelectedCategory(category)}
               >
-                {category}
+                {category === 'All' ? t('home.all') : category}
               </button>
             ))}
           </div>
@@ -198,7 +207,7 @@ const Home = () => {
                 style={{ cursor: 'pointer' }}
               >
                 {work.image ? (
-                  <img src={`http://localhost:3002${work.image}`} alt={work.name} />
+                  <img src={getImageUrl(work.image)} alt={work.name} />
                 ) : (
                   <div className="work-placeholder"></div>
                 )}
@@ -211,9 +220,9 @@ const Home = () => {
       </section>
 
       {/* Blog/Thoughts Section */}
-      <section className="blog">
+      <section id="thoughts" className="blog">
         <div className="container">
-          <h2 className="section-title">Blog</h2>
+          <h2 className="section-title">{t('home.blog')}</h2>
           <div className="blog-grid">
             {thoughts.map((thought, index) => (
               <div 
@@ -222,15 +231,15 @@ const Home = () => {
                 onClick={() => navigate(`/thoughts/${thought.id}`)}
                 style={{ cursor: 'pointer' }}
               >
-                {thought.image && (
-                  <img src={`http://localhost:3002${thought.image}`} alt={thought.title} />
-                )}
+              {thought.image && (
+                <img src={getImageUrl(thought.image)} alt={thought.title} />
+              )}
                 <div className="blog-content">
                   <h3>{thought.title} →</h3>
                   <p>{thought.content}</p>
                   <div className="blog-meta">
-                    <span>{thought.views || 0}K views</span>
-                    <span>{new Date(thought.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span>{thought.views || 0}{t('home.views')}</span>
+                    <span>{new Date(thought.created_at).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                 </div>
               </div>
@@ -244,34 +253,34 @@ const Home = () => {
         <div className="container">
           <div className="contact-content">
             <div className="contact-title-wrapper">
-              <h2 className="section-title">Contact me</h2>
+              <h2 className="section-title">{t('home.contactMe')}</h2>
             </div>
             <div className="contact-form-container">
-              <h3>Let's Talk!</h3>
-              <p className="form-subtitle">Tell me about your idea here</p>
+              <h3>{t('home.letsTalk')}</h3>
+              <p className="form-subtitle">{t('home.tellMeAboutIdea')}</p>
               <form onSubmit={handleSubmitMessage} className="contact-form">
                 <div className="form-group">
-                  <label>Name</label>
+                  <label>{t('home.name')}</label>
                   <input
                     type="text"
-                    placeholder="Seu nome"
+                    placeholder={t('home.namePlaceholder')}
                     value={messageForm.name}
                     onChange={(e) => setMessageForm({ ...messageForm, name: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Email</label>
+                  <label>{t('home.email')}</label>
                   <input
                     type="email"
-                    placeholder="contato@email.com"
+                    placeholder={t('home.emailPlaceholder')}
                     value={messageForm.email}
                     onChange={(e) => setMessageForm({ ...messageForm, email: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Message</label>
+                  <label>{t('home.message')}</label>
                   <textarea
-                    placeholder="Leave your contact details and message, and I'll get back to you ASAP."
+                    placeholder={t('home.messagePlaceholder')}
                     rows="5"
                     value={messageForm.message}
                     onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
@@ -282,7 +291,7 @@ const Home = () => {
                     {submitStatus.message}
                   </div>
                 )}
-                <button type="submit" className="submit-button">Send Messages</button>
+                <button type="submit" className="submit-button">{t('home.sendMessages')}</button>
               </form>
             </div>
           </div>

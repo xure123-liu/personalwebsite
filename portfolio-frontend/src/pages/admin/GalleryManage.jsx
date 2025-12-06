@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminNav from './AdminNav';
 import api from '../../services/api';
+import { getImageUrl } from '../../utils/config';
 import './Manage.css';
 
 const GalleryManage = ({ onLogout }) => {
@@ -44,7 +45,7 @@ const GalleryManage = ({ onLogout }) => {
       image: null
     });
     if (item.image) {
-      setImagePreview(`http://localhost:3002${item.image}`);
+      setImagePreview(getImageUrl(item.image));
     } else {
       setImagePreview('');
     }
@@ -167,7 +168,7 @@ const GalleryManage = ({ onLogout }) => {
                     <td>{item.name}</td>
                     <td>
                       {item.image && (
-                        <img src={`http://localhost:3002${item.image}`} alt={item.name} className="table-image" />
+                        <img src={getImageUrl(item.image)} alt={item.name} className="table-image" />
                       )}
                     </td>
                     <td>

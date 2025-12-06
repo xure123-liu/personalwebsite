@@ -1,6 +1,10 @@
 .contact-page {
-  padding-top: 80px; /* 缩小顶部间距 */
+  padding-top: 140px; /* 增加顶部间距，确保标题不被导航栏遮挡 */
   min-height: 80vh;
+}
+
+.page-title {
+  scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
 .contact-content {
@@ -153,7 +157,11 @@
 
 @media (max-width: 768px) {
   .contact-page {
-    padding-top: 100px;
+    padding-top: 120px; /* 移动端也保持足够的顶部间距 */
+  }
+
+  .page-title {
+    scroll-margin-top: 120px; /* 移动端调整 scroll-margin */
   }
 
   .contact-form-container {

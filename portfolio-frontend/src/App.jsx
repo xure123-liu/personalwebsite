@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { LanguageProvider } from './i18n/LanguageContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -13,28 +14,30 @@ import './App.css';
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/admin/*" element={<Admin />} />
-          <Route path="/*" element={
-            <>
-              <Header />
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/works" element={<Works />} />
-                <Route path="/works/:id" element={<WorkDetail />} />
-                <Route path="/thoughts" element={<Thoughts />} />
-                <Route path="/thoughts/:id" element={<ThoughtDetail />} />
-                <Route path="/gallery" element={<Gallery />} />
-                <Route path="/contact" element={<Contact />} />
-              </Routes>
-              <Footer />
-            </>
-          } />
-        </Routes>
-      </div>
-    </Router>
+    <LanguageProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            <Route path="/admin/*" element={<Admin />} />
+            <Route path="/*" element={
+              <>
+                <Header />
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/works" element={<Works />} />
+                  <Route path="/works/:id" element={<WorkDetail />} />
+                  <Route path="/thoughts" element={<Thoughts />} />
+                  <Route path="/thoughts/:id" element={<ThoughtDetail />} />
+                  <Route path="/gallery" element={<Gallery />} />
+                  <Route path="/contact" element={<Contact />} />
+                </Routes>
+                <Footer />
+              </>
+            } />
+          </Routes>
+        </div>
+      </Router>
+    </LanguageProvider>
   );
 }
 

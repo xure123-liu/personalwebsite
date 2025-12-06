@@ -8,12 +8,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const PORT = 3002;
-const JWT_SECRET = 'your-secret-key-change-in-production';
+const PORT = process.env.PORT || 3002;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // 中间件
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // 支持 multipart/form-data 中的文本字段
 app.use('/uploads', express.static('uploads'));
 
 // 确保uploads目录存在
@@ -162,17 +163,29 @@ const upload = multer({
 
 // Multer错误处理中间件
 const handleMulterError = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: '文件大小超过限制（5MB）' });
-    }
-    if (err.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({ error: '文件数量超过限制' });
-    }
-    return res.status(400).json({ error: '文件上传错误: ' + err.message });
-  }
   if (err) {
-    return res.status(400).json({ error: err.message });
+    console.error('Multer错误:', err);
+    console.error('错误代码:', err.code);
+    console.error('错误字段:', err.field);
+    console.error('错误消息:', err.message);
+    
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: '文件大小超过限制（5MB）' });
+      }
+      if (err.code === 'LIMIT_FILE_COUNT') {
+        return res.status(400).json({ error: '文件数量超过限制' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        // LIMIT_UNEXPECTED_FILE 在使用 upload.any() 时不应该出现，但如果有，我们忽略它
+        console.warn('收到 LIMIT_UNEXPECTED_FILE 错误，但使用 upload.any() 应该允许所有字段');
+        // 继续处理，不返回错误
+        return next();
+      }
+      return res.status(400).json({ error: '文件上传错误: ' + err.message });
+    }
+    // 其他错误（如文件类型错误）
+    return res.status(400).json({ error: err.message || '文件上传失败' });
   }
   next();
 };
@@ -448,7 +461,20 @@ app.get('/api/works/:id', (req, res) => {
   });
 });
 
-app.post('/api/works', authenticateToken, upload.any(), (req, res) => {
+app.post('/api/works', authenticateToken, (req, res, next) => {
+  // 使用 upload.any() 处理所有文件字段，文本字段会自动通过 req.body 访问
+  upload.any()(req, res, (err) => {
+    if (err) {
+      // 如果是 LIMIT_UNEXPECTED_FILE 错误，在使用 upload.any() 时应该忽略
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_UNEXPECTED_FILE') {
+        console.warn('忽略 LIMIT_UNEXPECTED_FILE 错误（使用 upload.any() 时）');
+        return next();
+      }
+      return handleMulterError(err, req, res, next);
+    }
+    next();
+  });
+}, (req, res) => {
   try {
     const { name, description, category, images_paths, sort_order } = req.body;
     
@@ -459,8 +485,15 @@ app.post('/api/works', authenticateToken, upload.any(), (req, res) => {
       category,
       images_paths,
       sort_order,
-      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files'
+      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files',
+      bodyKeys: Object.keys(req.body),
+      contentType: req.headers['content-type']
     });
+    
+    // 验证必填字段
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ error: '作品名称不能为空' });
+    }
     
     // 处理单张图片（兼容旧数据）
     const files = req.files || [];
@@ -515,17 +548,33 @@ app.post('/api/works', authenticateToken, upload.any(), (req, res) => {
         if (err) {
           console.error('创建作品失败:', err);
           console.error('SQL参数:', [name, description, image, imagesJson, category, sortOrder]);
+          console.error('错误堆栈:', err.stack);
           return res.status(500).json({ error: '创建失败: ' + err.message });
         }
+        console.log('创建作品成功:', this.lastID);
         res.json({ id: this.lastID, message: '创建成功' });
       });
   } catch (error) {
     console.error('处理创建作品请求时发生未捕获错误:', error);
+    console.error('错误堆栈:', error.stack);
     return res.status(500).json({ error: '服务器内部错误: ' + error.message });
   }
 });
 
-app.put('/api/works/:id', authenticateToken, upload.any(), (req, res) => {
+app.put('/api/works/:id', authenticateToken, (req, res, next) => {
+  // 使用 upload.any() 处理所有文件字段，文本字段会自动通过 req.body 访问
+  upload.any()(req, res, (err) => {
+    if (err) {
+      // 如果是 LIMIT_UNEXPECTED_FILE 错误，在使用 upload.any() 时应该忽略
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_UNEXPECTED_FILE') {
+        console.warn('忽略 LIMIT_UNEXPECTED_FILE 错误（使用 upload.any() 时）');
+        return next();
+      }
+      return handleMulterError(err, req, res, next);
+    }
+    next();
+  });
+}, (req, res) => {
   try {
     const { name, description, category, images_paths, sort_order } = req.body;
     const id = req.params.id;
@@ -538,7 +587,8 @@ app.put('/api/works/:id', authenticateToken, upload.any(), (req, res) => {
       category,
       images_paths,
       sort_order,
-      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files'
+      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files',
+      bodyKeys: Object.keys(req.body)
     });
 
     db.get('SELECT * FROM works WHERE id = ?', [id], (err, work) => {
@@ -628,13 +678,16 @@ app.put('/api/works/:id', authenticateToken, upload.any(), (req, res) => {
           if (err) {
             console.error('更新作品失败:', err);
             console.error('SQL参数:', [name, description, image, imagesJson, category, sortOrder, id]);
+            console.error('错误堆栈:', err.stack);
             return res.status(500).json({ error: '更新失败: ' + err.message });
           }
+          console.log('更新作品成功:', id);
           res.json({ message: '更新成功' });
         });
     });
   } catch (error) {
     console.error('处理更新作品请求时发生未捕获错误:', error);
+    console.error('错误堆栈:', error.stack);
     return res.status(500).json({ error: '服务器内部错误: ' + error.message });
   }
 });

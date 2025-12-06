@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/config';
 import './Gallery.css';
 
 const Gallery = () => {
+  const { t } = useLanguage();
   const [gallery, setGallery] = useState([]);
 
   useEffect(() => {
@@ -21,12 +24,12 @@ const Gallery = () => {
   return (
     <div className="gallery-page">
       <div className="container">
-        <h1 className="page-title">Gallery</h1>
+        <h1 className="page-title">{t('gallery.title')}</h1>
         <div className="gallery-grid">
           {gallery.map(item => (
             <div key={item.id} className="gallery-item">
               {item.image ? (
-                <img src={`http://localhost:3002${item.image}`} alt={item.name} />
+                <img src={getImageUrl(item.image)} alt={item.name} />
               ) : (
                 <div className="gallery-placeholder"></div>
               )}
@@ -37,7 +40,7 @@ const Gallery = () => {
         </div>
         {gallery.length === 0 && (
           <div className="empty-state">
-            <p>暂无图册内容</p>
+            <p>{t('gallery.noGallery')}</p>
           </div>
         )}
       </div>

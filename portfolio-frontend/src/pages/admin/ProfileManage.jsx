@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getImageUrl } from '../../utils/config';
 import AdminNav from './AdminNav';
 import api from '../../services/api';
 import './Manage.css';
@@ -61,13 +62,13 @@ const ProfileManage = ({ onLogout }) => {
         address: data.address || ''
       });
       
-      if (data.avatar) setAvatarPreview(`http://localhost:3002${data.avatar}`);
-      if (data.wechat_qr) setWechatPreview(`http://localhost:3002${data.wechat_qr}`);
-      if (data.qq_qr) setQqPreview(`http://localhost:3002${data.qq_qr}`);
+      if (data.avatar) setAvatarPreview(getImageUrl(data.avatar));
+      if (data.wechat_qr) setWechatPreview(getImageUrl(data.wechat_qr));
+      if (data.qq_qr) setQqPreview(getImageUrl(data.qq_qr));
       
       // 设置about_images预览
       if (aboutImages && aboutImages.length > 0) {
-        setAboutImagesPreview(aboutImages.map(img => `http://localhost:3002${img}`));
+        setAboutImagesPreview(aboutImages.map(img => getImageUrl(img)));
       }
     } catch (error) {
       console.error('加载失败:', error);

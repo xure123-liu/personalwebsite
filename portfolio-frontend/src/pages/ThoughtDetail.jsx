@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/config';
 import './ThoughtDetail.css';
 
 const ThoughtDetail = () => {
   const { id } = useParams();
+  const { t } = useLanguage();
   const [thought, setThought] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 页面加载时滚动到顶部，确保标题不被导航栏遮挡
+    window.scrollTo({ top: 0, behavior: 'instant' });
     loadThought();
   }, [id]);
 
@@ -24,11 +29,11 @@ const ThoughtDetail = () => {
   };
 
   if (loading) {
-    return <div className="thought-detail-loading">加载中...</div>;
+    return <div className="thought-detail-loading">{t('thoughtDetail.loading')}</div>;
   }
 
   if (!thought) {
-    return <div className="thought-detail-error">思考不存在</div>;
+    return <div className="thought-detail-error">{t('thoughtDetail.notFound')}</div>;
   }
 
   // 解析多图
@@ -58,13 +63,13 @@ const ThoughtDetail = () => {
             images.map((image, index) => (
               <div key={index} className="thought-detail-image-item">
                 <img 
-                  src={`http://localhost:3002${image}`} 
+                  src={getImageUrl(image)} 
                   alt={`${thought.title} - ${index + 1}`}
                 />
               </div>
             ))
           ) : (
-            <div className="thought-detail-no-images">暂无图片</div>
+            <div className="thought-detail-no-images">{t('thoughtDetail.noImages')}</div>
           )}
         </div>
       </div>

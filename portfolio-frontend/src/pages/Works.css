@@ -1,5 +1,5 @@
 .works-page {
-  padding-top: 120px;
+  padding-top: 140px; /* 增加顶部间距，确保标题不被导航栏遮挡 */
   min-height: 80vh;
 }
 
@@ -7,6 +7,7 @@
   font-size: 48px;
   font-weight: 700;
   margin-bottom: 50px;
+  scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
 .category-tabs {
@@ -94,11 +95,12 @@
 
 @media (max-width: 768px) {
   .works-page {
-    padding-top: 100px;
+    padding-top: 120px; /* 移动端也保持足够的顶部间距 */
   }
 
   .page-title {
     font-size: 36px;
+    scroll-margin-top: 120px; /* 移动端调整 scroll-margin */
   }
 
   .works-grid {

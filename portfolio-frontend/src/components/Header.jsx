@@ -1,9 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import './Header.css';
 
 const Header = () => {
   const location = useLocation();
+  const { t } = useLanguage();
   const [activeSection, setActiveSection] = useState('');
 
   // 监听滚动，判断当前所在的区域
@@ -97,11 +99,14 @@ const Header = () => {
       setActiveSection(sectionId);
       // 更新hash
       window.history.pushState(null, '', `#${sectionId}`);
-      // 滚动到目标区域
+      // 滚动到目标区域，使用 block: 'start' 确保标题从顶部开始显示
       setTimeout(() => {
         const element = document.getElementById(sectionId);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
         }
       }, 10);
     } else {
@@ -128,7 +133,7 @@ const Header = () => {
               }
             }}
           >
-            HOME
+            {t('nav.home')}
           </Link>
           <Link 
             to="/" 
@@ -138,25 +143,25 @@ const Header = () => {
               scrollToSection('about');
             }}
           >
-            ABOUT ME
+            {t('nav.aboutMe')}
           </Link>
           <Link 
             to="/works" 
             className={`nav-link ${isActive('/works') ? 'active' : ''}`}
           >
-            Blog
+            {t('nav.blog')}
           </Link>
           <Link 
             to="/thoughts" 
             className={`nav-link ${isActive('/thoughts') ? 'active' : ''}`}
           >
-            REVIEWS
+            {t('nav.reviews')}
           </Link>
           <Link 
             to="/contact" 
             className={`nav-link ${isActive('/contact') ? 'active' : ''}`}
           >
-            CONTACT
+            {t('nav.contact')}
           </Link>
         </nav>
       </div>

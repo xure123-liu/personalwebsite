@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminNav from './AdminNav';
 import api from '../../services/api';
+import { getImageUrl } from '../../utils/config';
 import './Manage.css';
 
 const ThoughtsManage = ({ onLogout }) => {
@@ -87,11 +88,11 @@ const ThoughtsManage = ({ onLogout }) => {
       sort_order: thought.sort_order || 0
     });
     if (thought.image) {
-      setImagePreview(`http://localhost:3002${thought.image}`);
+      setImagePreview(getImageUrl(thought.image));
     } else {
       setImagePreview('');
     }
-    setImagesPreview(images.map(img => `http://localhost:3002${img}`));
+    setImagesPreview(images.map(img => getImageUrl(img)));
   };
 
   const handleCancel = () => {
@@ -300,7 +301,7 @@ const ThoughtsManage = ({ onLogout }) => {
                     <td>{thought.title}</td>
                     <td>
                       {thought.image && (
-                        <img src={`http://localhost:3002${thought.image}`} alt={thought.title} className="table-image" />
+                        <img src={getImageUrl(thought.image)} alt={thought.title} className="table-image" />
                       )}
                     </td>
                     <td>

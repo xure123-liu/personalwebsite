@@ -2,7 +2,7 @@
   min-height: 100vh;
   background-color: #000;
   color: #fff;
-  padding: 120px 40px 60px;
+  padding: 140px 40px 60px; /* 增加顶部间距，确保标题不被导航栏遮挡 */
 }
 
 .work-detail-container {
@@ -12,6 +12,10 @@
 
 .work-detail-header {
   margin-bottom: 40px;
+}
+
+.work-detail-header {
+  scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
 .work-detail-header h1 {
@@ -29,18 +33,21 @@
 .work-detail-images {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 0; /* 图片上下间距为0 */
 }
 
 .work-detail-image-item {
   width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .work-detail-image-item img {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 8px;
+  margin: 0;
+  padding: 0;
 }
 
 .work-detail-no-images {
@@ -62,7 +69,11 @@
 
 @media (max-width: 768px) {
   .work-detail {
-    padding: 100px 20px 40px;
+    padding: 120px 20px 40px; /* 移动端也保持足够的顶部间距 */
+  }
+
+  .work-detail-header {
+    scroll-margin-top: 120px; /* 移动端调整 scroll-margin */
   }
 
   .work-detail-header h1 {
@@ -70,6 +81,6 @@
   }
 
   .work-detail-images {
-    gap: 20px;
+    gap: 0; /* 移动端也保持间距为0 */
   }
 }

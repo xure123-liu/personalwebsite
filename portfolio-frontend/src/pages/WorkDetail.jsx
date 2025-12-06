@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/config';
 import './WorkDetail.css';
 
 const WorkDetail = () => {
   const { id } = useParams();
+  const { t } = useLanguage();
   const [work, setWork] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 页面加载时滚动到顶部，确保标题不被导航栏遮挡
+    window.scrollTo({ top: 0, behavior: 'instant' });
     loadWork();
   }, [id]);
 
@@ -24,11 +29,11 @@ const WorkDetail = () => {
   };
 
   if (loading) {
-    return <div className="work-detail-loading">加载中...</div>;
+    return <div className="work-detail-loading">{t('workDetail.loading')}</div>;
   }
 
   if (!work) {
-    return <div className="work-detail-error">作品不存在</div>;
+    return <div className="work-detail-error">{t('workDetail.notFound')}</div>;
   }
 
   // 解析多图
@@ -58,13 +63,13 @@ const WorkDetail = () => {
             images.map((image, index) => (
               <div key={index} className="work-detail-image-item">
                 <img 
-                  src={`http://localhost:3002${image}`} 
+                  src={getImageUrl(image)} 
                   alt={`${work.name} - ${index + 1}`}
                 />
               </div>
             ))
           ) : (
-            <div className="work-detail-no-images">暂无图片</div>
+            <div className="work-detail-no-images">{t('workDetail.noImages')}</div>
           )}
         </div>
       </div>

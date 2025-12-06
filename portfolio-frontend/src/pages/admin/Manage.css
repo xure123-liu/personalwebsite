@@ -229,6 +229,18 @@
   overflow: hidden;
   background-color: #1a1a1a;
   border: 1px solid #333;
+  cursor: move;
+  transition: all 0.3s;
+}
+
+.image-preview-item:hover {
+  border-color: #666;
+  transform: scale(1.02);
+}
+
+.image-preview-item.dragging {
+  opacity: 0.5;
+  border-color: #007bff;
 }
 
 .image-preview-item img {
@@ -246,6 +258,34 @@
   padding: 4px 8px;
   font-size: 16px;
   line-height: 1;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 10;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: move;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.image-order {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  z-index: 10;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .about-image-item {
