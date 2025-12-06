@@ -56,7 +56,16 @@ const ThoughtDetail = () => {
       <div className="thought-detail-container">
         <div className="thought-detail-header">
           <h1>{thought.title}</h1>
-          {thought.content && <p className="thought-detail-content">{thought.content}</p>}
+          {thought.content && (
+            <div className="thought-detail-summary">
+              <p className="thought-detail-content">{thought.content}</p>
+            </div>
+          )}
+          {thought.content_detail && (
+            <div className="thought-detail-detail">
+              <p className="thought-detail-detail-content">{thought.content_detail}</p>
+            </div>
+          )}
         </div>
         <div className="thought-detail-images">
           {images.length > 0 ? (

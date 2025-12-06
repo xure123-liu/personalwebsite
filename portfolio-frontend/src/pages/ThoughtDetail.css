@@ -12,9 +12,6 @@
 
 .thought-detail-header {
   margin-bottom: 40px;
-}
-
-.thought-detail-header {
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
@@ -24,11 +21,31 @@
   margin-bottom: 20px;
 }
 
+.thought-detail-summary {
+  margin-bottom: 30px;
+}
+
 .thought-detail-content {
+  font-size: 16px; /* 小2号字体（相对于18px） */
+  line-height: 1.8;
+  color: #ccc;
+  white-space: pre-wrap;
+  background-color: #1a1a1a; /* 浅灰色背景 */
+  padding: 20px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.thought-detail-detail {
+  margin-bottom: 30px;
+}
+
+.thought-detail-detail-content {
   font-size: 18px;
   line-height: 1.8;
   color: #ccc;
   white-space: pre-wrap;
+  margin: 0;
 }
 
 .thought-detail-images {

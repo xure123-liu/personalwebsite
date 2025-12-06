@@ -10,6 +10,7 @@ const ThoughtsManage = ({ onLogout }) => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
+    content_detail: '',
     image: null,
     images: [],
     images_paths: [],
@@ -83,6 +84,7 @@ const ThoughtsManage = ({ onLogout }) => {
     setFormData({
       title: thought.title || '',
       content: thought.content || '',
+      content_detail: thought.content_detail || '',
       image: null,
       images: images.map(img => String(img)), // 现有图片路径作为字符串，用于预览和提交
       sort_order: thought.sort_order || 0
@@ -100,6 +102,7 @@ const ThoughtsManage = ({ onLogout }) => {
     setFormData({
       title: '',
       content: '',
+      content_detail: '',
       image: null,
       images: [],
       images_paths: [],
@@ -119,6 +122,7 @@ const ThoughtsManage = ({ onLogout }) => {
       // 确保所有文本字段都有值
       submitData.title = submitData.title || '';
       submitData.content = submitData.content || '';
+      submitData.content_detail = submitData.content_detail || '';
       submitData.sort_order = submitData.sort_order || 0;
       
       // 分离文件对象和字符串路径
@@ -140,6 +144,7 @@ const ThoughtsManage = ({ onLogout }) => {
       const cleanSubmitData = {
         title: submitData.title,
         content: submitData.content,
+        content_detail: submitData.content_detail,
         sort_order: submitData.sort_order,
         images_paths: submitData.images_paths
       };
@@ -219,11 +224,20 @@ const ThoughtsManage = ({ onLogout }) => {
             />
           </div>
           <div className="form-group">
-            <label>内容</label>
+            <label>简介</label>
             <textarea
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows="5"
+            />
+          </div>
+          <div className="form-group">
+            <label>内容详情</label>
+            <textarea
+              value={formData.content_detail}
+              onChange={(e) => setFormData({ ...formData, content_detail: e.target.value })}
+              rows="10"
+              style={{ minHeight: '200px' }}
             />
           </div>
           <div className="form-group">

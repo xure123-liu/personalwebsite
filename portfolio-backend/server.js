@@ -61,6 +61,7 @@ db.serialize(() => {
   db.run(`ALTER TABLE works ADD COLUMN sort_order INTEGER DEFAULT 0`, () => {});
   db.run(`ALTER TABLE thoughts ADD COLUMN images TEXT`, () => {});
   db.run(`ALTER TABLE thoughts ADD COLUMN sort_order INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE thoughts ADD COLUMN content_detail TEXT`, () => {});
 
   // 作品表
   db.run(`CREATE TABLE IF NOT EXISTS works (
@@ -80,6 +81,7 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     content TEXT,
+    content_detail TEXT,
     image TEXT,
     images TEXT,
     link TEXT,
@@ -749,12 +751,13 @@ app.get('/api/thoughts/:id', (req, res) => {
 
 app.post('/api/thoughts', authenticateToken, upload.any(), (req, res) => {
   try {
-    const { title, content, images_paths, sort_order } = req.body;
+    const { title, content, content_detail, images_paths, sort_order } = req.body;
     
     // 打印接收到的数据（用于调试）
     console.log('创建思考 - 接收到的数据:', {
       title,
       content,
+      content_detail,
       images_paths,
       sort_order,
       files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files'
@@ -801,13 +804,14 @@ app.post('/api/thoughts', authenticateToken, upload.any(), (req, res) => {
     console.log('创建思考 - SQL参数:', [
       safeString(title),
       safeString(content),
+      safeString(content_detail),
       safeValue(image),
       safeString(imagesJson),
       sortOrder
     ]);
 
-    db.run('INSERT INTO thoughts (title, content, image, images, sort_order) VALUES (?, ?, ?, ?, ?)',
-      [safeString(title), safeString(content), safeValue(image), safeString(imagesJson), sortOrder],
+    db.run('INSERT INTO thoughts (title, content, content_detail, image, images, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+      [safeString(title), safeString(content), safeString(content_detail), safeValue(image), safeString(imagesJson), sortOrder],
       function(err) {
         if (err) {
           console.error('创建思考失败:', err);
@@ -824,7 +828,7 @@ app.post('/api/thoughts', authenticateToken, upload.any(), (req, res) => {
 
 app.put('/api/thoughts/:id', authenticateToken, upload.any(), (req, res) => {
   try {
-    const { title, content, images_paths, sort_order } = req.body;
+    const { title, content, content_detail, images_paths, sort_order } = req.body;
     const id = req.params.id;
 
     // 打印接收到的数据（用于调试）
@@ -832,6 +836,7 @@ app.put('/api/thoughts/:id', authenticateToken, upload.any(), (req, res) => {
       id,
       title,
       content,
+      content_detail,
       images_paths,
       sort_order,
       files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files'
@@ -911,20 +916,22 @@ app.put('/api/thoughts/:id', authenticateToken, upload.any(), (req, res) => {
       console.log('更新思考 - SQL参数:', [
         safeString(title),
         safeString(content),
+        safeString(content_detail),
         safeValue(image),
         safeString(imagesJson),
         sortOrder,
         id
       ]);
 
-      db.run('UPDATE thoughts SET title = ?, content = ?, image = ?, images = ?, sort_order = ? WHERE id = ?',
-        [safeString(title), safeString(content), safeValue(image), safeString(imagesJson), sortOrder, id],
+      db.run('UPDATE thoughts SET title = ?, content = ?, content_detail = ?, image = ?, images = ?, sort_order = ? WHERE id = ?',
+        [safeString(title), safeString(content), safeString(content_detail), safeValue(image), safeString(imagesJson), sortOrder, id],
         function(err) {
           if (err) {
             console.error('更新思考失败:', err);
             console.error('SQL参数:', [
               safeString(title),
               safeString(content),
+              safeString(content_detail),
               safeValue(image),
               safeString(imagesJson),
               sortOrder,

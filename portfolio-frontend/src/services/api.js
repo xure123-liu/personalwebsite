@@ -195,6 +195,9 @@ export default {
     if (data.content !== undefined && data.content !== null) {
       formData.append('content', String(data.content));
     }
+    if (data.content_detail !== undefined && data.content_detail !== null) {
+      formData.append('content_detail', String(data.content_detail));
+    }
     if (data.sort_order !== undefined && data.sort_order !== null) {
       formData.append('sort_order', String(data.sort_order));
     }
