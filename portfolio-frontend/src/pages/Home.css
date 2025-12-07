@@ -105,12 +105,12 @@
 
 /* About Section */
 .about {
-  padding: 40px 0;
+  padding: 40px 0; /* 缩小间距：从50px改为40px */
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
 .section-title {
-  font-size: 44px;
+  font-size: 44px; /* 缩小4号：从48px改为44px */
   font-weight: 700;
   margin-bottom: 10px;
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
@@ -209,7 +209,7 @@
 
 /* Works Section */
 .works {
-  padding: 40px 0;
+  padding: 40px 0; /* 缩小间距：从50px改为40px */
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
@@ -290,7 +290,7 @@
 
 /* Blog Section */
 .blog {
-  padding: 40px 0;
+  padding: 40px 0; /* 缩小间距：从50px改为40px */
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
@@ -486,7 +486,7 @@
   }
 
   .section-title {
-    font-size: 32px;
+    font-size: 32px; /* 缩小4号：从36px改为32px */
     scroll-margin-top: 120px; /* 移动端调整 scroll-margin */
   }
 
