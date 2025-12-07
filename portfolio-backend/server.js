@@ -128,7 +128,7 @@ db.serialize(() => {
   // 初始化默认个人信息
   db.get('SELECT * FROM profile', (err, row) => {
     if (!row) {
-      db.run(`INSERT INTO profile (main_title, sub_title, description) 
+      db.run(`INSERT INTO profile (main_title, sub_title, hero_description) 
               VALUES (?, ?, ?)`, 
         ['Building digital photos, brands and memories', 
          'Nature itself inspires me',
@@ -171,21 +171,21 @@ const handleMulterError = (err, req, res, next) => {
     console.error('错误字段:', err.field);
     console.error('错误消息:', err.message);
     
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: '文件大小超过限制（5MB）' });
-      }
-      if (err.code === 'LIMIT_FILE_COUNT') {
-        return res.status(400).json({ error: '文件数量超过限制' });
-      }
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: '文件大小超过限制（5MB）' });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: '文件数量超过限制' });
+    }
       if (err.code === 'LIMIT_UNEXPECTED_FILE') {
         // LIMIT_UNEXPECTED_FILE 在使用 upload.any() 时不应该出现，但如果有，我们忽略它
         console.warn('收到 LIMIT_UNEXPECTED_FILE 错误，但使用 upload.any() 应该允许所有字段');
         // 继续处理，不返回错误
         return next();
       }
-      return res.status(400).json({ error: '文件上传错误: ' + err.message });
-    }
+    return res.status(400).json({ error: '文件上传错误: ' + err.message });
+  }
     // 其他错误（如文件类型错误）
     return res.status(400).json({ error: err.message || '文件上传失败' });
   }
