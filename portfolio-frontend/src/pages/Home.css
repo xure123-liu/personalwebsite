@@ -105,12 +105,12 @@
 
 /* About Section */
 .about {
-  padding: 50px 0;
+  padding: 40px 0;
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
 .section-title {
-  font-size: 48px;
+  font-size: 44px;
   font-weight: 700;
   margin-bottom: 10px;
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
@@ -209,7 +209,7 @@
 
 /* Works Section */
 .works {
-  padding: 50px 0;
+  padding: 40px 0;
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
@@ -290,7 +290,7 @@
 
 /* Blog Section */
 .blog {
-  padding: 50px 0;
+  padding: 40px 0;
   scroll-margin-top: 140px; /* 为固定导航栏留出空间 */
 }
 
@@ -486,7 +486,7 @@
   }
 
   .section-title {
-    font-size: 36px;
+    font-size: 32px;
     scroll-margin-top: 120px; /* 移动端调整 scroll-margin */
   }
 
