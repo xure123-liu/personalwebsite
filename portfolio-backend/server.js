@@ -27,11 +27,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // 支持 multipart/form-data 中的文本字段
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// 确保uploads目录存在
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
 // 数据库初始化（使用持久化路径）
 const db = new sqlite3.Database(DB_PATH);
 
