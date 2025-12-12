@@ -11,16 +11,21 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+// 配置数据存储路径（支持Railway Volume持久化）
+const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+const DB_PATH = path.join(DATA_DIR, 'portfolio.db');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+
+// 确保uploads目录存在
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 // 中间件
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // 支持 multipart/form-data 中的文本字段
 app.use('/uploads', express.static(UPLOADS_DIR));
-
-// 配置数据存储路径（支持Railway Volume持久化）
-const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
-const DB_PATH = path.join(DATA_DIR, 'portfolio.db');
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
 // 确保uploads目录存在
 if (!fs.existsSync(UPLOADS_DIR)) {
