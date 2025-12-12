@@ -15,15 +15,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // 支持 multipart/form-data 中的文本字段
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+// 配置数据存储路径（支持Railway Volume持久化）
+const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+const DB_PATH = path.join(DATA_DIR, 'portfolio.db');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
 // 确保uploads目录存在
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// 数据库初始化
-const db = new sqlite3.Database('portfolio.db');
+// 数据库初始化（使用持久化路径）
+const db = new sqlite3.Database(DB_PATH);
 
 // 创建表
 db.serialize(() => {
@@ -140,7 +145,7 @@ db.serialize(() => {
 // 文件上传配置
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -183,7 +188,7 @@ const handleMulterError = (err, req, res, next) => {
         console.warn('收到 LIMIT_UNEXPECTED_FILE 错误，但使用 upload.any() 应该允许所有字段');
         // 继续处理，不返回错误
         return next();
-      }
+    }
     return res.status(400).json({ error: '文件上传错误: ' + err.message });
   }
     // 其他错误（如文件类型错误）
