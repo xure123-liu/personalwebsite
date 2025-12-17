@@ -145,10 +145,10 @@ const Footer = () => {
             ) : (
               // 如果没有友情链接，显示占位符
               <>
-                <a href="#" className="social-icon">Twitter</a>
-                <a href="#" className="social-icon">Instagram</a>
-                <a href="#" className="social-icon">Dribbble</a>
-                <a href="#" className="social-icon">Facebook</a>
+            <a href="#" className="social-icon">Twitter</a>
+            <a href="#" className="social-icon">Instagram</a>
+            <a href="#" className="social-icon">Dribbble</a>
+            <a href="#" className="social-icon">Facebook</a>
               </>
             )}
           </div>

@@ -48,8 +48,10 @@ const Thoughts = () => {
                 <h3>{thought.title}</h3>
                 <p>{thought.content}</p>
                 <div className="thought-meta">
-                  <span>{thought.views || 0}{t('home.views')}</span>
-                  <span>{new Date(thought.created_at).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span>{new Date(thought.created_at).toLocaleDateString(
+                    language === 'zh' ? 'zh-CN' : 'en-US',
+                    { month: 'short', day: 'numeric', year: 'numeric' }
+                  )}</span>
                 </div>
               </div>
             </div>

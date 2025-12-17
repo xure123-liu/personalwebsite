@@ -231,9 +231,9 @@ const Home = () => {
                 onClick={() => navigate(`/thoughts/${thought.id}`)}
                 style={{ cursor: 'pointer' }}
               >
-              {thought.image && (
+                {thought.image && (
                 <img src={getImageUrl(thought.image)} alt={thought.title} />
-              )}
+                )}
                 <div className="blog-content">
                   <h3>{thought.title} →</h3>
                   <p>{thought.content}</p>
