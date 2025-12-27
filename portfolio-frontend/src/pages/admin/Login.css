@@ -76,7 +76,7 @@
   margin: 0 !important;
 }
 
-/* 聚焦状态样式 - 确保背景保持黑色 */
+/* 聚焦状态样式 - 确保背景和边框保持统一 */
 .login-form .form-group input:focus,
 .login-form .form-group input[type="text"]:focus,
 .login-form .form-group input[type="password"]:focus,
@@ -84,6 +84,9 @@
 .login-form input[type="text"]:focus,
 .login-form input[type="password"]:focus {
   outline: none !important;
+  border: 1px solid #555 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
   border-color: #555 !important;
   background-color: #000000 !important;
   background: #000000 !important;
@@ -91,24 +94,32 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* 输入文字时的样式 - 确保背景保持黑色 */
+/* 输入文字时的样式 - 确保背景和边框保持统一 */
 .login-form .form-group input:not(:placeholder-shown),
 .login-form .form-group input[type="text"]:not(:placeholder-shown),
 .login-form .form-group input[type="password"]:not(:placeholder-shown),
 .login-form input:not(:placeholder-shown),
 .login-form input[type="text"]:not(:placeholder-shown),
 .login-form input[type="password"]:not(:placeholder-shown) {
+  border: 1px solid #333 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #333 !important;
   background-color: #000000 !important;
   background: #000000 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* 有值时的样式 */
+/* 有值时的样式 - 确保边框一致 */
 .login-form .form-group input[type="text"]:valid,
 .login-form .form-group input[type="password"]:valid,
 .login-form input[type="text"]:valid,
 .login-form input[type="password"]:valid {
+  border: 1px solid #333 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #333 !important;
   background-color: #000000 !important;
   background: #000000 !important;
   color: #ffffff !important;
