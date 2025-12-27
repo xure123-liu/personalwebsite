@@ -16,9 +16,22 @@ const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH |
 const DB_PATH = path.join(DATA_DIR, 'portfolio.db');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
+// 输出数据路径信息（用于调试和验证）
+console.log('=== 数据存储路径配置 ===');
+console.log('DATA_DIR:', DATA_DIR);
+console.log('DB_PATH:', DB_PATH);
+console.log('UPLOADS_DIR:', UPLOADS_DIR);
+console.log('环境变量 DATA_DIR:', process.env.DATA_DIR || '未设置');
+console.log('环境变量 RAILWAY_VOLUME_MOUNT_PATH:', process.env.RAILWAY_VOLUME_MOUNT_PATH || '未设置');
+if (!process.env.DATA_DIR && !process.env.RAILWAY_VOLUME_MOUNT_PATH) {
+  console.warn('⚠️  警告：未设置 DATA_DIR 或 RAILWAY_VOLUME_MOUNT_PATH，数据将存储在临时目录，可能丢失！');
+  console.warn('⚠️  请在 Railway 上设置环境变量 DATA_DIR=/data 并创建 Volume 挂载到 /data');
+}
+
 // 确保uploads目录存在
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  console.log('✅ 已创建 uploads 目录:', UPLOADS_DIR);
 }
 
 // 中间件
@@ -1132,8 +1145,14 @@ app.delete('/api/links/:id', authenticateToken, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('Connected to SQLite database');
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Connected to SQLite database at: ${DB_PATH}`);
+  console.log(`✅ Uploads directory: ${UPLOADS_DIR}`);
+  if (process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH) {
+    console.log('✅ 数据持久化已启用，数据将保存在持久化存储中');
+  } else {
+    console.warn('⚠️  数据持久化未启用，数据可能丢失！请配置 Volume 和 DATA_DIR 环境变量');
+  }
 });
 
 

@@ -30,40 +30,46 @@
   gap: 20px;
 }
 
+/* 统一所有输入框样式 */
 .form-group input {
   width: 100%;
   padding: 12px;
   border: 1px solid #333;
   border-radius: 4px;
-  background-color: #000000; /* 黑色背景，和密码框一致 */
-  color: #ffffff; /* 白色文字 */
+  background-color: #000000;
+  color: #ffffff;
   font-size: 16px;
   font-family: inherit;
+  box-sizing: border-box;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+  transition: border-color 0.3s;
 }
 
 /* 确保用户名和密码输入框样式完全一致 */
 .form-group input[type="text"],
 .form-group input[type="password"] {
-  background-color: #000000 !important; /* 确保用户名和密码框都是黑色背景 */
-  color: #ffffff !important; /* 白色文字 */
+  background-color: #000000 !important;
+  color: #ffffff !important;
   border: 1px solid #333 !important;
+  padding: 12px !important;
+  font-size: 16px !important;
+  border-radius: 4px !important;
 }
 
 /* 聚焦状态样式 */
 .form-group input:focus {
   outline: none;
-  border-color: #555;
-  background-color: #000000;
-  color: #ffffff;
+  border-color: #555 !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
 /* 输入文字时的样式 */
 .form-group input:not(:placeholder-shown) {
-  background-color: #000000;
-  color: #ffffff;
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
 .form-group input::placeholder {
