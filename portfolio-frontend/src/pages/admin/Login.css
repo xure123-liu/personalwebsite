@@ -95,8 +95,12 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-.form-group input::placeholder {
-  color: #666; /* 占位符文字为深灰色 */
+/* 占位符文字样式 - 更明显，便于区分 */
+.form-group input::placeholder,
+.form-group input[type="text"]::placeholder,
+.form-group input[type="password"]::placeholder {
+  color: #999 !important; /* 更亮的灰色，便于看清 */
+  opacity: 1 !important; /* 确保不透明 */
 }
 
 /* 确保自动填充不会改变背景色 - 强制黑色背景 */
