@@ -31,12 +31,14 @@
 }
 
 /* 统一所有输入框样式 - 确保用户名和密码框完全一致 */
-.form-group input {
+.login-form .form-group input,
+.login-form input {
   width: 100%;
   padding: 12px;
   border: 1px solid #333;
   border-radius: 4px;
   background-color: #000000 !important;
+  background: #000000 !important;
   color: #ffffff !important;
   font-size: 16px;
   font-family: inherit;
@@ -47,14 +49,17 @@
   transition: border-color 0.3s;
 }
 
-/* 确保用户名和密码输入框样式完全一致 - 所有状态都统一 */
-.form-group input[type="text"],
-.form-group input[type="password"] {
+/* 确保用户名和密码输入框样式完全一致 - 所有状态都统一，使用最高优先级 */
+.login-form .form-group input[type="text"],
+.login-form .form-group input[type="password"],
+.login-form input[type="text"],
+.login-form input[type="password"] {
   width: 100% !important;
   padding: 12px !important;
   border: 1px solid #333 !important;
   border-radius: 4px !important;
   background-color: #000000 !important;
+  background: #000000 !important;
   color: #ffffff !important;
   font-size: 16px !important;
   font-family: inherit !important;
@@ -65,9 +70,12 @@
 }
 
 /* 聚焦状态样式 - 确保背景保持黑色 */
-.form-group input:focus,
-.form-group input[type="text"]:focus,
-.form-group input[type="password"]:focus {
+.login-form .form-group input:focus,
+.login-form .form-group input[type="text"]:focus,
+.login-form .form-group input[type="password"]:focus,
+.login-form input:focus,
+.login-form input[type="text"]:focus,
+.login-form input[type="password"]:focus {
   outline: none !important;
   border-color: #555 !important;
   background-color: #000000 !important;
@@ -77,9 +85,12 @@
 }
 
 /* 输入文字时的样式 - 确保背景保持黑色 */
-.form-group input:not(:placeholder-shown),
-.form-group input[type="text"]:not(:placeholder-shown),
-.form-group input[type="password"]:not(:placeholder-shown) {
+.login-form .form-group input:not(:placeholder-shown),
+.login-form .form-group input[type="text"]:not(:placeholder-shown),
+.login-form .form-group input[type="password"]:not(:placeholder-shown),
+.login-form input:not(:placeholder-shown),
+.login-form input[type="text"]:not(:placeholder-shown),
+.login-form input[type="password"]:not(:placeholder-shown) {
   background-color: #000000 !important;
   background: #000000 !important;
   color: #ffffff !important;
@@ -87,8 +98,10 @@
 }
 
 /* 有值时的样式 */
-.form-group input[type="text"]:valid,
-.form-group input[type="password"]:valid {
+.login-form .form-group input[type="text"]:valid,
+.login-form .form-group input[type="password"]:valid,
+.login-form input[type="text"]:valid,
+.login-form input[type="password"]:valid {
   background-color: #000000 !important;
   background: #000000 !important;
   color: #ffffff !important;
@@ -96,22 +109,33 @@
 }
 
 /* 占位符文字样式 - 更明显，便于区分 */
-.form-group input::placeholder,
-.form-group input[type="text"]::placeholder,
-.form-group input[type="password"]::placeholder {
+.login-form .form-group input::placeholder,
+.login-form .form-group input[type="text"]::placeholder,
+.login-form .form-group input[type="password"]::placeholder,
+.login-form input::placeholder,
+.login-form input[type="text"]::placeholder,
+.login-form input[type="password"]::placeholder {
   color: #999 !important; /* 更亮的灰色，便于看清 */
   opacity: 1 !important; /* 确保不透明 */
 }
 
 /* 确保自动填充不会改变背景色 - 强制黑色背景 */
-.form-group input:-webkit-autofill,
-.form-group input:-webkit-autofill:hover,
-.form-group input:-webkit-autofill:focus,
-.form-group input:-webkit-autofill:active,
-.form-group input[type="text"]:-webkit-autofill,
-.form-group input[type="text"]:-webkit-autofill:hover,
-.form-group input[type="text"]:-webkit-autofill:focus,
-.form-group input[type="text"]:-webkit-autofill:active {
+.login-form .form-group input:-webkit-autofill,
+.login-form .form-group input:-webkit-autofill:hover,
+.login-form .form-group input:-webkit-autofill:focus,
+.login-form .form-group input:-webkit-autofill:active,
+.login-form .form-group input[type="text"]:-webkit-autofill,
+.login-form .form-group input[type="text"]:-webkit-autofill:hover,
+.login-form .form-group input[type="text"]:-webkit-autofill:focus,
+.login-form .form-group input[type="text"]:-webkit-autofill:active,
+.login-form input:-webkit-autofill,
+.login-form input:-webkit-autofill:hover,
+.login-form input:-webkit-autofill:focus,
+.login-form input:-webkit-autofill:active,
+.login-form input[type="text"]:-webkit-autofill,
+.login-form input[type="text"]:-webkit-autofill:hover,
+.login-form input[type="text"]:-webkit-autofill:focus,
+.login-form input[type="text"]:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px #000000 inset !important;
   -webkit-text-fill-color: #ffffff !important;
   background-color: #000000 !important;
