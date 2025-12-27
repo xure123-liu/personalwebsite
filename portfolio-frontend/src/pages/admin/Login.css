@@ -30,14 +30,14 @@
   gap: 20px;
 }
 
-/* 统一所有输入框样式 */
+/* 统一所有输入框样式 - 确保用户名和密码框完全一致 */
 .form-group input {
   width: 100%;
   padding: 12px;
   border: 1px solid #333;
   border-radius: 4px;
-  background-color: #000000;
-  color: #ffffff;
+  background-color: #000000 !important;
+  color: #ffffff !important;
   font-size: 16px;
   font-family: inherit;
   box-sizing: border-box;
@@ -64,30 +64,55 @@
   appearance: none !important;
 }
 
-/* 聚焦状态样式 */
-.form-group input:focus {
-  outline: none;
+/* 聚焦状态样式 - 确保背景保持黑色 */
+.form-group input:focus,
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
+  outline: none !important;
   border-color: #555 !important;
   background-color: #000000 !important;
+  background: #000000 !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
-/* 输入文字时的样式 */
-.form-group input:not(:placeholder-shown) {
+/* 输入文字时的样式 - 确保背景保持黑色 */
+.form-group input:not(:placeholder-shown),
+.form-group input[type="text"]:not(:placeholder-shown),
+.form-group input[type="password"]:not(:placeholder-shown) {
   background-color: #000000 !important;
+  background: #000000 !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* 有值时的样式 */
+.form-group input[type="text"]:valid,
+.form-group input[type="password"]:valid {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .form-group input::placeholder {
   color: #666; /* 占位符文字为深灰色 */
 }
 
-/* 确保自动填充不会改变背景色 */
+/* 确保自动填充不会改变背景色 - 强制黑色背景 */
 .form-group input:-webkit-autofill,
 .form-group input:-webkit-autofill:hover,
-.form-group input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px #000000 inset;
-  -webkit-text-fill-color: #ffffff;
+.form-group input:-webkit-autofill:focus,
+.form-group input:-webkit-autofill:active,
+.form-group input[type="text"]:-webkit-autofill,
+.form-group input[type="text"]:-webkit-autofill:hover,
+.form-group input[type="text"]:-webkit-autofill:focus,
+.form-group input[type="text"]:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #000000 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #ffffff !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
