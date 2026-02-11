@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// 配置数据存储路径（支持Railway Volume持久化）
+// 配置数据存储路径（支持 Render 持久化磁盘 / Railway Volume）
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 const DB_PATH = path.join(DATA_DIR, 'portfolio.db');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
@@ -24,8 +24,9 @@ console.log('UPLOADS_DIR:', UPLOADS_DIR);
 console.log('环境变量 DATA_DIR:', process.env.DATA_DIR || '未设置');
 console.log('环境变量 RAILWAY_VOLUME_MOUNT_PATH:', process.env.RAILWAY_VOLUME_MOUNT_PATH || '未设置');
 if (!process.env.DATA_DIR && !process.env.RAILWAY_VOLUME_MOUNT_PATH) {
-  console.warn('⚠️  警告：未设置 DATA_DIR 或 RAILWAY_VOLUME_MOUNT_PATH，数据将存储在临时目录，可能丢失！');
-  console.warn('⚠️  请在 Railway 上设置环境变量 DATA_DIR=/data 并创建 Volume 挂载到 /data');
+  console.warn('⚠️  警告：未设置 DATA_DIR，数据将存储在临时目录，重启/重新部署后会被清空！');
+  console.warn('⚠️  Render：在 Dashboard 为服务添加 Persistent Disk，挂载路径 /data，并设置环境变量 DATA_DIR=/data');
+  console.warn('⚠️  Railway：设置环境变量 DATA_DIR=/data 并将 Volume 挂载到 /data');
 }
 
 // 确保uploads目录存在
@@ -1151,7 +1152,7 @@ app.listen(PORT, () => {
   if (process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH) {
     console.log('✅ 数据持久化已启用，数据将保存在持久化存储中');
   } else {
-    console.warn('⚠️  数据持久化未启用，数据可能丢失！请配置 Volume 和 DATA_DIR 环境变量');
+    console.warn('⚠️  数据持久化未启用，重启或重新部署后数据会丢失！请配置持久化磁盘并设置 DATA_DIR');
   }
 });
 

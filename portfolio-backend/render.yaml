@@ -1,5 +1,6 @@
 # Render 配置文件（可选）
-# 如果使用 Render，可以创建这个文件来简化配置
+# 使用 Render 时，数据持久化必须：1）在 Dashboard 为本服务添加 Persistent Disk，挂载路径设为 /data
+# 2）在 Environment 中设置 DATA_DIR=/data（下面已包含）。持久化磁盘需付费计划。
 
 services:
   - type: web
@@ -12,8 +13,12 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      # 数据持久化：必须与 Dashboard 中添加的 Disk 挂载路径一致
+      - key: DATA_DIR
+        value: /data
+    # 持久化磁盘（在 Dashboard 中添加 Disk 时，Mount Path 填 /data，Size 选 1GB）
     disk:
       name: portfolio-data
-      mountPath: /opt/render/project/src
+      mountPath: /data
       sizeGB: 1
 
