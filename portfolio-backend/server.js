@@ -1,225 +1,52 @@
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { supabase, uploadToStorage } = require('./supabase');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// 配置数据存储路径（支持 Render 持久化磁盘 / Railway Volume）
-const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
-const DB_PATH = path.join(DATA_DIR, 'portfolio.db');
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
-
-// 输出数据路径信息（用于调试和验证）
-console.log('=== 数据存储路径配置 ===');
-console.log('DATA_DIR:', DATA_DIR);
-console.log('DB_PATH:', DB_PATH);
-console.log('UPLOADS_DIR:', UPLOADS_DIR);
-console.log('环境变量 DATA_DIR:', process.env.DATA_DIR || '未设置');
-console.log('环境变量 RAILWAY_VOLUME_MOUNT_PATH:', process.env.RAILWAY_VOLUME_MOUNT_PATH || '未设置');
-if (!process.env.DATA_DIR && !process.env.RAILWAY_VOLUME_MOUNT_PATH) {
-  console.warn('⚠️  警告：未设置 DATA_DIR，数据将存储在临时目录，重启/重新部署后会被清空！');
-  console.warn('⚠️  Render：在 Dashboard 为服务添加 Persistent Disk，挂载路径 /data，并设置环境变量 DATA_DIR=/data');
-  console.warn('⚠️  Railway：设置环境变量 DATA_DIR=/data 并将 Volume 挂载到 /data');
+console.log('=== 数据存储配置 ===');
+console.log('使用 Supabase 数据库 + Storage（持久化）');
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('⚠️  SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY 未设置，API 将无法正常工作');
 }
 
-// 确保uploads目录存在
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  console.log('✅ 已创建 uploads 目录:', UPLOADS_DIR);
-}
-
-// 中间件
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // 支持 multipart/form-data 中的文本字段
-app.use('/uploads', express.static(UPLOADS_DIR));
+app.use(express.urlencoded({ extended: true }));
 
-// 数据库初始化（使用持久化路径）
-const db = new sqlite3.Database(DB_PATH);
-
-// 创建表
-db.serialize(() => {
-  // 用户表（用于登录）
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  )`);
-
-  // 个人信息表
-  db.run(`CREATE TABLE IF NOT EXISTS profile (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    avatar TEXT,
-    name TEXT,
-    main_title TEXT,
-    sub_title TEXT,
-    hero_description TEXT,
-    about_description TEXT,
-    about_images TEXT,
-    skills TEXT,
-    wechat_qr TEXT,
-    qq_qr TEXT,
-    email TEXT,
-    address TEXT
-  )`);
-
-  // 检查并添加新字段（用于已存在的数据库）
-  db.run(`ALTER TABLE profile ADD COLUMN name TEXT`, () => {});
-  db.run(`ALTER TABLE profile ADD COLUMN hero_description TEXT`, () => {});
-  db.run(`ALTER TABLE profile ADD COLUMN about_description TEXT`, () => {});
-  db.run(`ALTER TABLE profile ADD COLUMN about_images TEXT`, () => {});
-  db.run(`ALTER TABLE profile ADD COLUMN address TEXT`, () => {});
-  db.run(`ALTER TABLE works ADD COLUMN images TEXT`, () => {});
-  db.run(`ALTER TABLE works ADD COLUMN sort_order INTEGER DEFAULT 0`, () => {});
-  db.run(`ALTER TABLE thoughts ADD COLUMN images TEXT`, () => {});
-  db.run(`ALTER TABLE thoughts ADD COLUMN sort_order INTEGER DEFAULT 0`, () => {});
-  db.run(`ALTER TABLE thoughts ADD COLUMN content_detail TEXT`, () => {});
-
-  // 作品表
-  db.run(`CREATE TABLE IF NOT EXISTS works (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    image TEXT,
-    images TEXT,
-    link TEXT,
-    category TEXT,
-    sort_order INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // 思考沉淀表
-  db.run(`CREATE TABLE IF NOT EXISTS thoughts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    content TEXT,
-    content_detail TEXT,
-    image TEXT,
-    images TEXT,
-    link TEXT,
-    views INTEGER DEFAULT 0,
-    sort_order INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // 图册表
-  db.run(`CREATE TABLE IF NOT EXISTS gallery (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    image TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // 留言表
-  db.run(`CREATE TABLE IF NOT EXISTS messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    message TEXT NOT NULL,
-    status TEXT DEFAULT 'unread',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // 友情链接表
-  db.run(`CREATE TABLE IF NOT EXISTS links (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    url TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // 初始化默认用户
-  db.get('SELECT * FROM users WHERE username = ?', ['Liuxueyou'], (err, row) => {
-    if (!row) {
-      const hashedPassword = bcrypt.hashSync('5203013009LXYdsg', 10);
-      db.run('INSERT INTO users (username, password) VALUES (?, ?)', ['Liuxueyou', hashedPassword]);
-    }
-  });
-
-  // 初始化默认个人信息
-  db.get('SELECT * FROM profile', (err, row) => {
-    if (!row) {
-      db.run(`INSERT INTO profile (main_title, sub_title, hero_description) 
-              VALUES (?, ?, ?)`, 
-        ['Building digital photos, brands and memories', 
-         'Nature itself inspires me',
-         'I am passionate about travel and photography, specializing in elopement and lifestyle photography. I capture pure love and the essence of human beings.']);
-    }
-  });
-});
-
-// 文件上传配置
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// 内存存储，文件上传后转存到 Supabase Storage
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('不支持的文件类型'));
-    }
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) cb(null, true);
+    else cb(new Error('不支持的文件类型'));
   }
 });
 
-// Multer错误处理中间件
 const handleMulterError = (err, req, res, next) => {
-  if (err) {
-    console.error('Multer错误:', err);
-    console.error('错误代码:', err.code);
-    console.error('错误字段:', err.field);
-    console.error('错误消息:', err.message);
-    
+  if (!err) return next();
   if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: '文件大小超过限制（5MB）' });
-    }
-    if (err.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({ error: '文件数量超过限制' });
-    }
-      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-        // LIMIT_UNEXPECTED_FILE 在使用 upload.any() 时不应该出现，但如果有，我们忽略它
-        console.warn('收到 LIMIT_UNEXPECTED_FILE 错误，但使用 upload.any() 应该允许所有字段');
-        // 继续处理，不返回错误
-        return next();
-    }
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: '文件大小超过限制（5MB）' });
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') return next();
     return res.status(400).json({ error: '文件上传错误: ' + err.message });
   }
-    // 其他错误（如文件类型错误）
-    return res.status(400).json({ error: err.message || '文件上传失败' });
-  }
-  next();
+  return res.status(400).json({ error: err.message || '文件上传失败' });
 };
 
-// 认证中间件
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.sendStatus(401);
-  }
-
+  if (!token) return res.sendStatus(401);
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403);
     req.user = user;
@@ -227,933 +54,454 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// 登录
+// 初始化默认用户和 profile（仅当不存在时）
+async function initDefaults() {
+  if (!supabase) return;
+  try {
+    const { data: userRow } = await supabase.from('users').select('id').eq('username', 'Liuxueyou').maybeSingle();
+    if (!userRow) {
+      const hash = bcrypt.hashSync('5203013009LXYdsg', 10);
+      await supabase.from('users').insert({ username: 'Liuxueyou', password: hash });
+      console.log('✅ 已创建默认用户');
+    }
+    const { data: profileRow } = await supabase.from('profile').select('id').limit(1).maybeSingle();
+    if (!profileRow) {
+      await supabase.from('profile').insert({
+        main_title: 'Building digital photos, brands and memories',
+        sub_title: 'Nature itself inspires me',
+        hero_description: 'I am passionate about travel and photography, specializing in elopement and lifestyle photography. I capture pure love and the essence of human beings.'
+      });
+      console.log('✅ 已创建默认 profile');
+    }
+  } catch (e) {
+    console.error('初始化默认数据失败:', e);
+  }
+}
+
+// ----- 登录 -----
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-
-  db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-
-    if (!user) {
-      return res.status(401).json({ error: '用户名或密码错误' });
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: '用户名或密码错误' });
-    }
-
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token });
-  });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data: user, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
+  if (error || !user) return res.status(401).json({ error: '用户名或密码错误' });
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).json({ error: '用户名或密码错误' });
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+  res.json({ token });
 });
 
-// 获取个人信息
-app.get('/api/profile', (req, res) => {
-  db.get('SELECT * FROM profile ORDER BY id DESC LIMIT 1', (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    res.json(row || {});
-  });
+// ----- Profile -----
+app.get('/api/profile', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('profile').select('*').order('id', { ascending: false }).limit(1).maybeSingle();
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  res.json(data || {});
 });
 
-// 更新个人信息
-// 使用 upload.any() 允许所有字段，然后手动处理文件
-app.put('/api/profile', authenticateToken, upload.any(), (req, res) => {
+app.put('/api/profile', authenticateToken, upload.any(), handleMulterError, async (req, res) => {
   try {
+    if (!supabase) return res.status(500).json({ error: '服务器错误' });
     const { name, main_title, sub_title, hero_description, about_description, skills, email, address, about_images_paths } = req.body;
-    
-    // 手动处理文件：从 req.files 数组中提取对应的文件
-    // upload.any() 返回的是数组，不是对象
     const files = req.files || [];
     const avatarFile = files.find(f => f.fieldname === 'avatar');
     const wechatQrFile = files.find(f => f.fieldname === 'wechat_qr');
     const qqQrFile = files.find(f => f.fieldname === 'qq_qr');
     const aboutImagesFiles = files.filter(f => f.fieldname === 'about_images');
-    
-    // 打印接收到的数据（用于调试）
-    console.log('接收到的数据:', {
-      name, main_title, sub_title, hero_description, about_description, 
-      skills, email, address, about_images_paths,
-      files: files.map(f => ({ fieldname: f.fieldname, filename: f.filename }))
-    });
-    
-    // about_images_paths是前端传来的现有图片路径JSON字符串
-    const about_images = about_images_paths;
-    
-    db.get('SELECT * FROM profile ORDER BY id DESC LIMIT 1', (err, existing) => {
-      if (err) {
-        console.error('查询profile失败:', err);
-        return res.status(500).json({ error: '服务器错误: ' + err.message });
-      }
 
-      const avatar = avatarFile ? `/uploads/${avatarFile.filename}` : (existing?.avatar || null);
-      const wechat_qr = wechatQrFile ? `/uploads/${wechatQrFile.filename}` : (existing?.wechat_qr || null);
-      const qq_qr = qqQrFile ? `/uploads/${qqQrFile.filename}` : (existing?.qq_qr || null);
-    
-    // 处理about_images多文件上传
+    const { data: existing } = await supabase.from('profile').select('*').order('id', { ascending: false }).limit(1).maybeSingle();
+
+    let avatar = existing?.avatar || null;
+    let wechat_qr = existing?.wechat_qr || null;
+    let qq_qr = existing?.qq_qr || null;
+    if (avatarFile) avatar = await uploadToStorage(avatarFile.buffer, avatarFile.originalname, avatarFile.mimetype);
+    if (wechatQrFile) wechat_qr = await uploadToStorage(wechatQrFile.buffer, wechatQrFile.originalname, wechatQrFile.mimetype);
+    if (qqQrFile) qq_qr = await uploadToStorage(qqQrFile.buffer, qqQrFile.originalname, qqQrFile.mimetype);
+
     let aboutImagesArray = [];
-    
-    // 如果前端传了about_images_paths字符串（包含用户选择的现有图片路径）
-    if (about_images !== undefined && about_images !== null) {
-      const trimmed = String(about_images).trim();
-      if (trimmed === '' || trimmed === '[]') {
-        // 如果前端明确传递了空数组或空字符串，表示要清空所有图片
-        aboutImagesArray = [];
-      } else {
+    if (about_images_paths !== undefined && about_images_paths !== null) {
+      const trimmed = String(about_images_paths).trim();
+      if (trimmed !== '' && trimmed !== '[]') {
         try {
-          const parsed = JSON.parse(about_images);
-          if (Array.isArray(parsed)) {
-            aboutImagesArray = parsed; // 使用前端传来的数组（可能用户删除了某些图片）
-          } else {
-            // 如果不是数组，使用现有图片
-            if (existing?.about_images) {
-              try {
-                aboutImagesArray = JSON.parse(existing.about_images);
-              } catch (e2) {
-                aboutImagesArray = [];
-              }
-            }
-          }
-        } catch (e) {
-          console.error('解析about_images_paths失败:', e, '原始值:', about_images);
-          // 如果解析失败，尝试使用现有图片
-          if (existing?.about_images) {
-            try {
-              aboutImagesArray = JSON.parse(existing.about_images);
-            } catch (e2) {
-              aboutImagesArray = [];
-            }
-          } else {
-            aboutImagesArray = [];
-          }
+          const parsed = JSON.parse(about_images_paths);
+          if (Array.isArray(parsed)) aboutImagesArray = parsed;
+          else if (existing?.about_images) try { aboutImagesArray = JSON.parse(existing.about_images); } catch (_) {}
+        } catch (_) {
+          if (existing?.about_images) try { aboutImagesArray = JSON.parse(existing.about_images); } catch (_) {}
         }
       }
-    } else {
-      // 如果没有传字符串，使用现有图片
-      if (existing?.about_images) {
-        try {
-          aboutImagesArray = JSON.parse(existing.about_images);
-        } catch (e) {
-          aboutImagesArray = [];
-        }
-      }
+    } else if (existing?.about_images) {
+      try { aboutImagesArray = JSON.parse(existing.about_images); } catch (_) {}
     }
-    
-    // 如果有新上传的文件，添加到数组末尾
-    if (aboutImagesFiles && aboutImagesFiles.length > 0) {
-      const newImages = aboutImagesFiles.map(file => `/uploads/${file.filename}`);
-      aboutImagesArray = [...aboutImagesArray, ...newImages];
-      
-      // 限制最多5张图片
-      if (aboutImagesArray.length > 5) {
-        aboutImagesArray = aboutImagesArray.slice(0, 5);
-      }
+    for (const file of aboutImagesFiles) {
+      const url = await uploadToStorage(file.buffer, file.originalname, file.mimetype);
+      if (url) aboutImagesArray.push(url);
     }
-    
-    const aboutImagesJson = JSON.stringify(aboutImagesArray);
+    if (aboutImagesArray.length > 5) aboutImagesArray = aboutImagesArray.slice(0, 5);
+    const about_images = JSON.stringify(aboutImagesArray);
 
-      // 确保所有值都是有效的（将undefined转为null，但保留空字符串）
-      const safeValue = (val) => {
-        if (val === undefined) return null;
-        if (val === null) return null;
-        // 保留空字符串，因为用户可能想清空某些字段
-        return val;
-      };
-      
-      if (existing) {
-        db.run(`UPDATE profile SET 
-          avatar = ?, name = ?, main_title = ?, sub_title = ?, hero_description = ?, about_description = ?, 
-          about_images = ?, skills = ?, wechat_qr = ?, qq_qr = ?, email = ?, address = ?
-          WHERE id = ?`,
-          [
-            safeValue(avatar), 
-            safeValue(name), 
-            safeValue(main_title), 
-            safeValue(sub_title), 
-            safeValue(hero_description), 
-            safeValue(about_description), 
-            safeValue(aboutImagesJson), 
-            safeValue(skills), 
-            safeValue(wechat_qr), 
-            safeValue(qq_qr), 
-            safeValue(email), 
-            safeValue(address), 
-            existing.id
-          ],
-          (err) => {
-            if (err) {
-              console.error('更新profile失败:', err);
-              console.error('SQL参数:', [
-                safeValue(avatar), 
-                safeValue(name), 
-                safeValue(main_title), 
-                safeValue(sub_title), 
-                safeValue(hero_description), 
-                safeValue(about_description), 
-                safeValue(aboutImagesJson), 
-                safeValue(skills), 
-                safeValue(wechat_qr), 
-                safeValue(qq_qr), 
-                safeValue(email), 
-                safeValue(address), 
-                existing.id
-              ]);
-              return res.status(500).json({ error: '更新失败: ' + err.message });
-            }
-            console.log('更新成功，ID:', existing.id);
-            // 返回更新后的数据
-            db.get('SELECT * FROM profile WHERE id = ?', [existing.id], (err, updated) => {
-              if (err) {
-                console.error('获取更新后的数据失败:', err);
-                return res.json({ message: '更新成功' });
-              }
-              res.json({ message: '更新成功', data: updated });
-            });
-          });
-      } else {
-        db.run(`INSERT INTO profile (avatar, name, main_title, sub_title, hero_description, about_description, about_images, skills, wechat_qr, qq_qr, email, address)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            safeValue(avatar), 
-            safeValue(name), 
-            safeValue(main_title), 
-            safeValue(sub_title), 
-            safeValue(hero_description), 
-            safeValue(about_description), 
-            safeValue(aboutImagesJson), 
-            safeValue(skills), 
-            safeValue(wechat_qr), 
-            safeValue(qq_qr), 
-            safeValue(email), 
-            safeValue(address)
-          ],
-          (err) => {
-            if (err) {
-              console.error('创建profile失败:', err);
-              console.error('SQL参数:', [avatar, name, main_title, sub_title, hero_description, about_description, aboutImagesJson, skills, wechat_qr, qq_qr, email, address]);
-              return res.status(500).json({ error: '创建失败: ' + err.message });
-            }
-            res.json({ message: '创建成功' });
-          });
-      }
-    });
-  } catch (error) {
-    console.error('处理请求时发生错误:', error);
-    return res.status(500).json({ error: '服务器错误: ' + error.message });
+    const safe = v => (v === undefined || v === null) ? null : v;
+    const row = {
+      avatar: safe(avatar), name: safe(name), main_title: safe(main_title), sub_title: safe(sub_title),
+      hero_description: safe(hero_description), about_description: safe(about_description), about_images,
+      skills: safe(skills), wechat_qr: safe(wechat_qr), qq_qr: safe(qq_qr), email: safe(email), address: safe(address)
+    };
+
+    if (existing) {
+      const { error } = await supabase.from('profile').update(row).eq('id', existing.id);
+      if (error) return res.status(500).json({ error: '更新失败: ' + error.message });
+      const { data: updated } = await supabase.from('profile').select('*').eq('id', existing.id).single();
+      return res.json({ message: '更新成功', data: updated });
+    }
+    const { data: inserted, error } = await supabase.from('profile').insert(row).select('*').single();
+    if (error) return res.status(500).json({ error: '创建失败: ' + error.message });
+    res.json({ message: '创建成功', data: inserted });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: '服务器错误: ' + e.message });
   }
 });
 
-// 作品相关API
-app.get('/api/works', (req, res) => {
+// ----- Works -----
+app.get('/api/works', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
   const { category } = req.query;
-  let query = 'SELECT * FROM works';
-  const params = [];
-
-  if (category && category !== 'All') {
-    query += ' WHERE category = ?';
-    params.push(category);
-  }
-
-  query += ' ORDER BY sort_order ASC, created_at DESC';
-
-  db.all(query, params, (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    res.json(rows);
-  });
+  let q = supabase.from('works').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+  if (category && category !== 'All') q = q.eq('category', category);
+  const { data, error } = await q;
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  res.json(data || []);
 });
 
-// 获取单个作品详情
-app.get('/api/works/:id', (req, res) => {
-  const id = req.params.id;
-  db.get('SELECT * FROM works WHERE id = ?', [id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    if (!row) {
-      return res.status(404).json({ error: '作品不存在' });
-    }
-    res.json(row);
-  });
+app.get('/api/works/:id', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('works').select('*').eq('id', req.params.id).maybeSingle();
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  if (!data) return res.status(404).json({ error: '作品不存在' });
+  res.json(data);
 });
 
 app.post('/api/works', authenticateToken, (req, res, next) => {
-  // 使用 upload.any() 处理所有文件字段，文本字段会自动通过 req.body 访问
   upload.any()(req, res, (err) => {
-    if (err) {
-      // 如果是 LIMIT_UNEXPECTED_FILE 错误，在使用 upload.any() 时应该忽略
-      if (err instanceof multer.MulterError && err.code === 'LIMIT_UNEXPECTED_FILE') {
-        console.warn('忽略 LIMIT_UNEXPECTED_FILE 错误（使用 upload.any() 时）');
-        return next();
-      }
-      return handleMulterError(err, req, res, next);
-    }
+    if (err && (!(err instanceof multer.MulterError) || err.code !== 'LIMIT_UNEXPECTED_FILE')) return handleMulterError(err, req, res, next);
     next();
   });
-}, (req, res) => {
+}, async (req, res) => {
   try {
+    if (!supabase) return res.status(500).json({ error: '服务器错误' });
     const { name, description, category, images_paths, sort_order } = req.body;
-    
-    // 打印接收到的数据（用于调试）
-    console.log('创建作品 - 接收到的数据:', {
-      name,
-      description,
-      category,
-      images_paths,
-      sort_order,
-      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files',
-      bodyKeys: Object.keys(req.body),
-      contentType: req.headers['content-type']
-    });
-    
-    // 验证必填字段
-    if (!name || name.trim() === '') {
-      return res.status(400).json({ error: '作品名称不能为空' });
-    }
-    
-    // 处理单张图片（兼容旧数据）
+    if (!name || !name.trim()) return res.status(400).json({ error: '作品名称不能为空' });
     const files = req.files || [];
+    let image = null;
     const imageFile = files.find(f => f.fieldname === 'image');
-    const image = imageFile ? `/uploads/${imageFile.filename}` : null;
-    
-    // 处理多图
+    if (imageFile) image = await uploadToStorage(imageFile.buffer, imageFile.originalname, imageFile.mimetype);
+
     let imagesArray = [];
-    if (images_paths !== undefined && images_paths !== null && images_paths !== '') {
-      const trimmed = String(images_paths).trim();
-      if (trimmed === '' || trimmed === '[]') {
-        // 如果前端明确传递了空数组或空字符串，表示要清空所有图片
-        imagesArray = [];
-      } else {
-        try {
-          const parsed = JSON.parse(images_paths);
-          if (Array.isArray(parsed)) {
-            imagesArray = parsed;
-          }
-        } catch (e) {
-          console.error('解析images_paths失败:', e, '原始值:', images_paths);
-        }
-      }
+    if (images_paths && String(images_paths).trim() && String(images_paths).trim() !== '[]') {
+      try { const p = JSON.parse(images_paths); if (Array.isArray(p)) imagesArray = p; } catch (_) {}
     }
-    
-    // 处理新上传的多图文件
     const imagesFiles = files.filter(f => f.fieldname === 'images');
-    if (imagesFiles && imagesFiles.length > 0) {
-      const newImages = imagesFiles.map(file => `/uploads/${file.filename}`);
-      imagesArray = [...imagesArray, ...newImages];
+    for (const f of imagesFiles) {
+      const url = await uploadToStorage(f.buffer, f.originalname, f.mimetype);
+      if (url) imagesArray.push(url);
     }
-    
-    const imagesJson = JSON.stringify(imagesArray);
-    const sortOrder = sort_order !== undefined && sort_order !== null ? parseInt(sort_order) : 0;
+    const images = JSON.stringify(imagesArray);
+    const sortOrder = sort_order != null ? parseInt(sort_order) : 0;
 
-    // 确保所有值都是有效的
-    const safeValue = (val) => (val !== undefined && val !== null) ? val : null;
-    const safeString = (val) => (val !== undefined && val !== null) ? String(val) : '';
-
-    console.log('创建作品 - SQL参数:', [
-      safeString(name),
-      safeString(description),
-      safeValue(image),
-      safeString(imagesJson),
-      safeString(category),
-      sortOrder
-    ]);
-
-    db.run('INSERT INTO works (name, description, image, images, category, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-      [safeString(name), safeString(description), safeValue(image), safeString(imagesJson), safeString(category), sortOrder],
-      function(err) {
-        if (err) {
-          console.error('创建作品失败:', err);
-          console.error('SQL参数:', [name, description, image, imagesJson, category, sortOrder]);
-          console.error('错误堆栈:', err.stack);
-          return res.status(500).json({ error: '创建失败: ' + err.message });
-        }
-        console.log('创建作品成功:', this.lastID);
-        res.json({ id: this.lastID, message: '创建成功' });
-      });
-  } catch (error) {
-    console.error('处理创建作品请求时发生未捕获错误:', error);
-    console.error('错误堆栈:', error.stack);
-    return res.status(500).json({ error: '服务器内部错误: ' + error.message });
+    const { data: inserted, error } = await supabase.from('works').insert({
+      name: name.trim(), description: description || '', image, images, category: category || '', sort_order: sortOrder
+    }).select('id').single();
+    if (error) return res.status(500).json({ error: '创建失败: ' + error.message });
+    res.json({ id: inserted.id, message: '创建成功' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 });
 
 app.put('/api/works/:id', authenticateToken, (req, res, next) => {
-  // 使用 upload.any() 处理所有文件字段，文本字段会自动通过 req.body 访问
   upload.any()(req, res, (err) => {
-    if (err) {
-      // 如果是 LIMIT_UNEXPECTED_FILE 错误，在使用 upload.any() 时应该忽略
-      if (err instanceof multer.MulterError && err.code === 'LIMIT_UNEXPECTED_FILE') {
-        console.warn('忽略 LIMIT_UNEXPECTED_FILE 错误（使用 upload.any() 时）');
-        return next();
-      }
-      return handleMulterError(err, req, res, next);
-    }
+    if (err && (!(err instanceof multer.MulterError) || err.code !== 'LIMIT_UNEXPECTED_FILE')) return handleMulterError(err, req, res, next);
     next();
   });
-}, (req, res) => {
+}, async (req, res) => {
   try {
+    if (!supabase) return res.status(500).json({ error: '服务器错误' });
+    const id = req.params.id;
+    const { data: work } = await supabase.from('works').select('*').eq('id', id).maybeSingle();
+    if (!work) return res.status(404).json({ error: '作品不存在' });
+
     const { name, description, category, images_paths, sort_order } = req.body;
-    const id = req.params.id;
-
-    // 打印接收到的数据（用于调试）
-    console.log('更新作品 - 接收到的数据:', {
-      id,
-      name,
-      description,
-      category,
-      images_paths,
-      sort_order,
-      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files',
-      bodyKeys: Object.keys(req.body)
-    });
-
-    db.get('SELECT * FROM works WHERE id = ?', [id], (err, work) => {
-      if (err) {
-        console.error('查询作品失败:', err);
-        return res.status(500).json({ error: '查询作品失败: ' + err.message });
-      }
-      if (!work) {
-        return res.status(404).json({ error: '作品不存在' });
-      }
-
-      // 处理单张图片（兼容旧数据）
-      const files = req.files || [];
-      const imageFile = files.find(f => f.fieldname === 'image');
-      const image = imageFile ? `/uploads/${imageFile.filename}` : (work.image || null);
-      
-      // 处理多图
-      let imagesArray = [];
-      if (images_paths !== undefined && images_paths !== null && images_paths !== '') {
-        const trimmed = String(images_paths).trim();
-        if (trimmed === '' || trimmed === '[]') {
-          // 如果前端明确传递了空数组或空字符串，表示要清空所有图片
-          imagesArray = [];
-        } else {
-          try {
-            const parsed = JSON.parse(images_paths);
-            if (Array.isArray(parsed)) {
-              imagesArray = parsed;
-            } else {
-              // 如果不是数组，尝试使用现有图片
-              if (work.images) {
-                try {
-                  imagesArray = JSON.parse(work.images);
-                } catch (e2) {
-                  imagesArray = [];
-                }
-              }
-            }
-          } catch (e) {
-            console.error('解析images_paths失败:', e, '原始值:', images_paths);
-            // 如果解析失败，尝试使用现有图片
-            if (work.images) {
-              try {
-                imagesArray = JSON.parse(work.images);
-              } catch (e2) {
-                imagesArray = [];
-              }
-            }
-          }
-        }
-      } else if (work.images) {
-        // 如果没有传images_paths，使用现有图片
-        try {
-          imagesArray = JSON.parse(work.images);
-        } catch (e) {
-          imagesArray = [];
-        }
-      }
-      
-      // 处理新上传的多图文件
-      const imagesFiles = files.filter(f => f.fieldname === 'images');
-      if (imagesFiles && imagesFiles.length > 0) {
-        const newImages = imagesFiles.map(file => `/uploads/${file.filename}`);
-        imagesArray = [...imagesArray, ...newImages];
-      }
-      
-      const imagesJson = JSON.stringify(imagesArray);
-      const sortOrder = sort_order !== undefined && sort_order !== null ? parseInt(sort_order) : (work.sort_order || 0);
-
-      // 确保所有值都是有效的
-      const safeValue = (val) => (val !== undefined && val !== null) ? val : null;
-      const safeString = (val) => (val !== undefined && val !== null) ? String(val) : '';
-
-      console.log('更新作品 - SQL参数:', [
-        safeString(name),
-        safeString(description),
-        safeValue(image),
-        safeString(imagesJson),
-        safeString(category),
-        sortOrder,
-        id
-      ]);
-
-      db.run('UPDATE works SET name = ?, description = ?, image = ?, images = ?, category = ?, sort_order = ? WHERE id = ?',
-        [safeString(name), safeString(description), safeValue(image), safeString(imagesJson), safeString(category), sortOrder, id],
-        (err) => {
-          if (err) {
-            console.error('更新作品失败:', err);
-            console.error('SQL参数:', [name, description, image, imagesJson, category, sortOrder, id]);
-            console.error('错误堆栈:', err.stack);
-            return res.status(500).json({ error: '更新失败: ' + err.message });
-          }
-          console.log('更新作品成功:', id);
-          res.json({ message: '更新成功' });
-        });
-    });
-  } catch (error) {
-    console.error('处理更新作品请求时发生未捕获错误:', error);
-    console.error('错误堆栈:', error.stack);
-    return res.status(500).json({ error: '服务器内部错误: ' + error.message });
-  }
-});
-
-app.delete('/api/works/:id', authenticateToken, (req, res) => {
-  db.run('DELETE FROM works WHERE id = ?', [req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '删除失败' });
-    }
-    res.json({ message: '删除成功' });
-  });
-});
-
-// 批量更新作品排序
-app.put('/api/works/sort', authenticateToken, (req, res) => {
-  const { items } = req.body; // items: [{id: 1, sort_order: 0}, {id: 2, sort_order: 1}, ...]
-  
-  if (!Array.isArray(items)) {
-    return res.status(400).json({ error: '无效的排序数据' });
-  }
-
-  const updatePromises = items.map(item => {
-    return new Promise((resolve, reject) => {
-      db.run('UPDATE works SET sort_order = ? WHERE id = ?', [item.sort_order, item.id], (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-  });
-
-  Promise.all(updatePromises)
-    .then(() => res.json({ message: '排序更新成功' }))
-    .catch(err => res.status(500).json({ error: '排序更新失败: ' + err.message }));
-});
-
-// 思考沉淀相关API
-app.get('/api/thoughts', (req, res) => {
-  db.all('SELECT * FROM thoughts ORDER BY sort_order ASC, created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    res.json(rows);
-  });
-});
-
-// 获取单个思考详情
-app.get('/api/thoughts/:id', (req, res) => {
-  const id = req.params.id;
-  db.get('SELECT * FROM thoughts WHERE id = ?', [id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    if (!row) {
-      return res.status(404).json({ error: '思考不存在' });
-    }
-    res.json(row);
-  });
-});
-
-app.post('/api/thoughts', authenticateToken, upload.any(), (req, res) => {
-  try {
-    const { title, content, content_detail, images_paths, sort_order } = req.body;
-    
-    // 打印接收到的数据（用于调试）
-    console.log('创建思考 - 接收到的数据:', {
-      title,
-      content,
-      content_detail,
-      images_paths,
-      sort_order,
-      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files'
-    });
-    
-    // 处理单张图片（兼容旧数据）
     const files = req.files || [];
+    let image = work.image;
     const imageFile = files.find(f => f.fieldname === 'image');
-    const image = imageFile ? `/uploads/${imageFile.filename}` : null;
-    
-    // 处理多图
+    if (imageFile) image = await uploadToStorage(imageFile.buffer, imageFile.originalname, imageFile.mimetype);
+
     let imagesArray = [];
-    if (images_paths !== undefined && images_paths !== null && images_paths !== '') {
-      const trimmed = String(images_paths).trim();
-      if (trimmed === '' || trimmed === '[]') {
-        // 如果前端明确传递了空数组或空字符串，表示要清空所有图片
-        imagesArray = [];
-      } else {
-        try {
-          const parsed = JSON.parse(images_paths);
-          if (Array.isArray(parsed)) {
-            imagesArray = parsed;
-          }
-        } catch (e) {
-          console.error('解析images_paths失败:', e, '原始值:', images_paths);
-        }
+    if (images_paths !== undefined && images_paths !== null) {
+      const t = String(images_paths).trim();
+      if (t === '' || t === '[]') imagesArray = [];
+      else {
+        try { const p = JSON.parse(images_paths); if (Array.isArray(p)) imagesArray = p; else if (work.images) imagesArray = JSON.parse(work.images); } catch (_) { if (work.images) try { imagesArray = JSON.parse(work.images); } catch (_) {} }
       }
-    }
-    
-    // 处理新上传的多图文件
+    } else if (work.images) try { imagesArray = JSON.parse(work.images); } catch (_) {}
     const imagesFiles = files.filter(f => f.fieldname === 'images');
-    if (imagesFiles && imagesFiles.length > 0) {
-      const newImages = imagesFiles.map(file => `/uploads/${file.filename}`);
-      imagesArray = [...imagesArray, ...newImages];
+    for (const f of imagesFiles) {
+      const url = await uploadToStorage(f.buffer, f.originalname, f.mimetype);
+      if (url) imagesArray.push(url);
     }
-    
-    const imagesJson = JSON.stringify(imagesArray);
-    const sortOrder = sort_order !== undefined && sort_order !== null ? parseInt(sort_order) : 0;
+    const images = JSON.stringify(imagesArray);
+    const sortOrder = sort_order != null ? parseInt(sort_order) : (work.sort_order || 0);
 
-    // 确保所有值都是有效的
-    const safeValue = (val) => (val !== undefined && val !== null) ? val : null;
-    const safeString = (val) => (val !== undefined && val !== null) ? String(val) : '';
-
-    console.log('创建思考 - SQL参数:', [
-      safeString(title),
-      safeString(content),
-      safeString(content_detail),
-      safeValue(image),
-      safeString(imagesJson),
-      sortOrder
-    ]);
-
-    db.run('INSERT INTO thoughts (title, content, content_detail, image, images, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-      [safeString(title), safeString(content), safeString(content_detail), safeValue(image), safeString(imagesJson), sortOrder],
-      function(err) {
-        if (err) {
-          console.error('创建思考失败:', err);
-          console.error('SQL参数:', [title, content, image, imagesJson, sortOrder]);
-          return res.status(500).json({ error: '创建失败: ' + err.message });
-        }
-        res.json({ id: this.lastID, message: '创建成功' });
-      });
-  } catch (error) {
-    console.error('处理创建思考请求时发生未捕获错误:', error);
-    return res.status(500).json({ error: '服务器内部错误: ' + error.message });
+    const { error } = await supabase.from('works').update({
+      name: (name != null ? name : work.name).toString(),
+      description: (description != null ? description : work.description) || '',
+      image, images, category: (category != null ? category : work.category) || '', sort_order: sortOrder
+    }).eq('id', id);
+    if (error) return res.status(500).json({ error: '更新失败: ' + error.message });
+    res.json({ message: '更新成功' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 });
 
-app.put('/api/thoughts/:id', authenticateToken, upload.any(), (req, res) => {
+app.delete('/api/works/:id', authenticateToken, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('works').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '删除失败' });
+  res.json({ message: '删除成功' });
+});
+
+app.put('/api/works/sort', authenticateToken, async (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items)) return res.status(400).json({ error: '无效的排序数据' });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  for (const item of items) {
+    await supabase.from('works').update({ sort_order: item.sort_order }).eq('id', item.id);
+  }
+  res.json({ message: '排序更新成功' });
+});
+
+// ----- Thoughts -----
+app.get('/api/thoughts', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('thoughts').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  res.json(data || []);
+});
+
+app.get('/api/thoughts/:id', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('thoughts').select('*').eq('id', req.params.id).maybeSingle();
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  if (!data) return res.status(404).json({ error: '思考不存在' });
+  res.json(data);
+});
+
+app.post('/api/thoughts', authenticateToken, upload.any(), handleMulterError, async (req, res) => {
   try {
+    if (!supabase) return res.status(500).json({ error: '服务器错误' });
     const { title, content, content_detail, images_paths, sort_order } = req.body;
+    const files = req.files || [];
+    let image = null;
+    const imageFile = files.find(f => f.fieldname === 'image');
+    if (imageFile) image = await uploadToStorage(imageFile.buffer, imageFile.originalname, imageFile.mimetype);
+
+    let imagesArray = [];
+    if (images_paths && String(images_paths).trim() && String(images_paths).trim() !== '[]') {
+      try { const p = JSON.parse(images_paths); if (Array.isArray(p)) imagesArray = p; } catch (_) {}
+    }
+    const imagesFiles = files.filter(f => f.fieldname === 'images');
+    for (const f of imagesFiles) {
+      const url = await uploadToStorage(f.buffer, f.originalname, f.mimetype);
+      if (url) imagesArray.push(url);
+    }
+    const images = JSON.stringify(imagesArray);
+    const sortOrder = sort_order != null ? parseInt(sort_order) : 0;
+
+    const { data: inserted, error } = await supabase.from('thoughts').insert({
+      title: (title || '').toString(), content: (content || '').toString(), content_detail: (content_detail || '').toString(),
+      image, images, sort_order: sortOrder
+    }).select('id').single();
+    if (error) return res.status(500).json({ error: '创建失败: ' + error.message });
+    res.json({ id: inserted.id, message: '创建成功' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/thoughts/:id', authenticateToken, upload.any(), handleMulterError, async (req, res) => {
+  try {
+    if (!supabase) return res.status(500).json({ error: '服务器错误' });
     const id = req.params.id;
+    const { data: thought } = await supabase.from('thoughts').select('*').eq('id', id).maybeSingle();
+    if (!thought) return res.status(404).json({ error: '思考不存在' });
 
-    // 打印接收到的数据（用于调试）
-    console.log('更新思考 - 接收到的数据:', {
-      id,
-      title,
-      content,
-      content_detail,
-      images_paths,
-      sort_order,
-      files: req.files ? req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })) : 'no files'
-    });
+    const { title, content, content_detail, images_paths, sort_order } = req.body;
+    const files = req.files || [];
+    let image = thought.image;
+    const imageFile = files.find(f => f.fieldname === 'image');
+    if (imageFile) image = await uploadToStorage(imageFile.buffer, imageFile.originalname, imageFile.mimetype);
 
-    db.get('SELECT * FROM thoughts WHERE id = ?', [id], (err, thought) => {
-      if (err) {
-        console.error('查询思考失败:', err);
-        return res.status(500).json({ error: '查询思考失败: ' + err.message });
+    let imagesArray = [];
+    if (images_paths !== undefined && images_paths !== null) {
+      const t = String(images_paths).trim();
+      if (t === '' || t === '[]') imagesArray = [];
+      else {
+        try { const p = JSON.parse(images_paths); if (Array.isArray(p)) imagesArray = p; else if (thought.images) imagesArray = JSON.parse(thought.images); } catch (_) { if (thought.images) try { imagesArray = JSON.parse(thought.images); } catch (_) {} }
       }
-      if (!thought) {
-        return res.status(404).json({ error: '思考不存在' });
-      }
+    } else if (thought.images) try { imagesArray = JSON.parse(thought.images); } catch (_) {}
+    const imagesFiles = files.filter(f => f.fieldname === 'images');
+    for (const f of imagesFiles) {
+      const url = await uploadToStorage(f.buffer, f.originalname, f.mimetype);
+      if (url) imagesArray.push(url);
+    }
+    const images = JSON.stringify(imagesArray);
+    const sortOrder = sort_order != null ? parseInt(sort_order) : (thought.sort_order || 0);
 
-      // 处理单张图片（兼容旧数据）
-      const files = req.files || [];
-      const imageFile = files.find(f => f.fieldname === 'image');
-      const image = imageFile ? `/uploads/${imageFile.filename}` : (thought.image || null);
-      
-      // 处理多图
-      let imagesArray = [];
-      if (images_paths !== undefined && images_paths !== null && images_paths !== '') {
-        const trimmed = String(images_paths).trim();
-        if (trimmed === '' || trimmed === '[]') {
-          // 如果前端明确传递了空数组或空字符串，表示要清空所有图片
-          imagesArray = [];
-        } else {
-          try {
-            const parsed = JSON.parse(images_paths);
-            if (Array.isArray(parsed)) {
-              imagesArray = parsed;
-            } else {
-              // 如果不是数组，尝试使用现有图片
-              if (thought.images) {
-                try {
-                  imagesArray = JSON.parse(thought.images);
-                } catch (e2) {
-                  imagesArray = [];
-                }
-              }
-            }
-          } catch (e) {
-            console.error('解析images_paths失败:', e, '原始值:', images_paths);
-            // 如果解析失败，尝试使用现有图片
-            if (thought.images) {
-              try {
-                imagesArray = JSON.parse(thought.images);
-              } catch (e2) {
-                imagesArray = [];
-              }
-            }
-          }
-        }
-      } else if (thought.images) {
-        // 如果没有传images_paths，使用现有图片
-        try {
-          imagesArray = JSON.parse(thought.images);
-        } catch (e) {
-          imagesArray = [];
-        }
-      }
-      
-      // 处理新上传的多图文件
-      const imagesFiles = files.filter(f => f.fieldname === 'images');
-      if (imagesFiles && imagesFiles.length > 0) {
-        const newImages = imagesFiles.map(file => `/uploads/${file.filename}`);
-        imagesArray = [...imagesArray, ...newImages];
-      }
-      
-      const imagesJson = JSON.stringify(imagesArray);
-      const sortOrder = sort_order !== undefined && sort_order !== null ? parseInt(sort_order) : (thought.sort_order || 0);
-
-      // 确保所有值都是有效的
-      const safeValue = (val) => (val !== undefined && val !== null) ? val : null;
-      const safeString = (val) => (val !== undefined && val !== null) ? String(val) : '';
-
-      console.log('更新思考 - SQL参数:', [
-        safeString(title),
-        safeString(content),
-        safeString(content_detail),
-        safeValue(image),
-        safeString(imagesJson),
-        sortOrder,
-        id
-      ]);
-
-      db.run('UPDATE thoughts SET title = ?, content = ?, content_detail = ?, image = ?, images = ?, sort_order = ? WHERE id = ?',
-        [safeString(title), safeString(content), safeString(content_detail), safeValue(image), safeString(imagesJson), sortOrder, id],
-        function(err) {
-          if (err) {
-            console.error('更新思考失败:', err);
-            console.error('SQL参数:', [
-              safeString(title),
-              safeString(content),
-              safeString(content_detail),
-              safeValue(image),
-              safeString(imagesJson),
-              sortOrder,
-              id
-            ]);
-            return res.status(500).json({ error: '更新失败: ' + err.message });
-          }
-          res.json({ message: '更新成功' });
-        });
-    });
-  } catch (error) {
-    console.error('处理更新思考请求时发生未捕获错误:', error);
-    console.error('错误堆栈:', error.stack);
-    return res.status(500).json({ error: '服务器内部错误: ' + error.message });
+    const { error } = await supabase.from('thoughts').update({
+      title: (title != null ? title : thought.title).toString(),
+      content: (content != null ? content : thought.content) || '',
+      content_detail: (content_detail != null ? content_detail : thought.content_detail) || '',
+      image, images, sort_order: sortOrder
+    }).eq('id', id);
+    if (error) return res.status(500).json({ error: '更新失败: ' + error.message });
+    res.json({ message: '更新成功' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 });
 
-app.delete('/api/thoughts/:id', authenticateToken, (req, res) => {
-  db.run('DELETE FROM thoughts WHERE id = ?', [req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '删除失败' });
-    }
-    res.json({ message: '删除成功' });
-  });
+app.delete('/api/thoughts/:id', authenticateToken, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('thoughts').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '删除失败' });
+  res.json({ message: '删除成功' });
 });
 
-// 批量更新思考排序
-app.put('/api/thoughts/sort', authenticateToken, (req, res) => {
-  const { items } = req.body; // items: [{id: 1, sort_order: 0}, {id: 2, sort_order: 1}, ...]
-  
-  if (!Array.isArray(items)) {
-    return res.status(400).json({ error: '无效的排序数据' });
+app.put('/api/thoughts/sort', authenticateToken, async (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items)) return res.status(400).json({ error: '无效的排序数据' });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  for (const item of items) {
+    await supabase.from('thoughts').update({ sort_order: item.sort_order }).eq('id', item.id);
   }
-
-  const updatePromises = items.map(item => {
-    return new Promise((resolve, reject) => {
-      db.run('UPDATE thoughts SET sort_order = ? WHERE id = ?', [item.sort_order, item.id], (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-  });
-
-  Promise.all(updatePromises)
-    .then(() => res.json({ message: '排序更新成功' }))
-    .catch(err => res.status(500).json({ error: '排序更新失败: ' + err.message }));
+  res.json({ message: '排序更新成功' });
 });
 
-// 图册相关API
-app.get('/api/gallery', (req, res) => {
-  db.all('SELECT * FROM gallery ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    res.json(rows);
-  });
+// ----- Gallery -----
+app.get('/api/gallery', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  res.json(data || []);
 });
 
-app.post('/api/gallery', authenticateToken, upload.single('image'), (req, res) => {
+app.post('/api/gallery', authenticateToken, upload.single('image'), handleMulterError, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
   const { name, description } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
-
-  db.run('INSERT INTO gallery (name, description, image) VALUES (?, ?, ?)',
-    [name, description, image],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: '创建失败' });
-      }
-      res.json({ id: this.lastID, message: '创建成功' });
-    });
+  let image = null;
+  if (req.file) image = await uploadToStorage(req.file.buffer, req.file.originalname, req.file.mimetype);
+  const { data: inserted, error } = await supabase.from('gallery').insert({ name: name || '', description: description || '', image }).select('id').single();
+  if (error) return res.status(500).json({ error: '创建失败' });
+  res.json({ id: inserted.id, message: '创建成功' });
 });
 
-app.put('/api/gallery/:id', authenticateToken, upload.single('image'), (req, res) => {
-  const { name, description } = req.body;
+app.put('/api/gallery/:id', authenticateToken, upload.single('image'), handleMulterError, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
   const id = req.params.id;
-
-  db.get('SELECT * FROM gallery WHERE id = ?', [id], (err, item) => {
-    if (err || !item) {
-      return res.status(404).json({ error: '图册不存在' });
-    }
-
-    const image = req.file ? `/uploads/${req.file.filename}` : item.image;
-
-    db.run('UPDATE gallery SET name = ?, description = ?, image = ? WHERE id = ?',
-      [name, description, image, id],
-      (err) => {
-        if (err) {
-          return res.status(500).json({ error: '更新失败' });
-        }
-        res.json({ message: '更新成功' });
-      });
-  });
+  const { data: item } = await supabase.from('gallery').select('*').eq('id', id).maybeSingle();
+  if (!item) return res.status(404).json({ error: '图册不存在' });
+  let image = item.image;
+  if (req.file) image = await uploadToStorage(req.file.buffer, req.file.originalname, req.file.mimetype);
+  const { error } = await supabase.from('gallery').update({ name: req.body.name || item.name, description: req.body.description != null ? req.body.description : item.description, image }).eq('id', id);
+  if (error) return res.status(500).json({ error: '更新失败' });
+  res.json({ message: '更新成功' });
 });
 
-app.delete('/api/gallery/:id', authenticateToken, (req, res) => {
-  db.run('DELETE FROM gallery WHERE id = ?', [req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '删除失败' });
-    }
-    res.json({ message: '删除成功' });
-  });
+app.delete('/api/gallery/:id', authenticateToken, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('gallery').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '删除失败' });
+  res.json({ message: '删除成功' });
 });
 
-// 留言相关API
-app.post('/api/messages', (req, res) => {
+// ----- Messages -----
+app.post('/api/messages', async (req, res) => {
   const { name, email, message } = req.body;
-
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: '请填写所有必填字段' });
-  }
-
-  // 简单的邮箱验证
-  if (!email.includes('@') || !email.includes('.')) {
-    return res.status(400).json({ error: '邮箱格式不正确' });
-  }
-
-  db.run('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)',
-    [name, email, message],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: '提交失败' });
-      }
-      res.json({ id: this.lastID, message: '提交成功' });
-    });
+  if (!name || !email || !message) return res.status(400).json({ error: '请填写所有必填字段' });
+  if (!email.includes('@') || !email.includes('.')) return res.status(400).json({ error: '邮箱格式不正确' });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data: inserted, error } = await supabase.from('messages').insert({ name, email, message }).select('id').single();
+  if (error) return res.status(500).json({ error: '提交失败' });
+  res.json({ id: inserted.id, message: '提交成功' });
 });
 
-app.get('/api/messages', authenticateToken, (req, res) => {
-  db.all('SELECT * FROM messages ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    res.json(rows);
-  });
+app.get('/api/messages', authenticateToken, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  res.json(data || []);
 });
 
-app.put('/api/messages/:id', authenticateToken, (req, res) => {
+app.put('/api/messages/:id', authenticateToken, async (req, res) => {
   const { status } = req.body;
-  db.run('UPDATE messages SET status = ? WHERE id = ?', [status, req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '更新失败' });
-    }
-    res.json({ message: '更新成功' });
-  });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('messages').update({ status }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '更新失败' });
+  res.json({ message: '更新成功' });
 });
 
-app.delete('/api/messages/:id', authenticateToken, (req, res) => {
-  db.run('DELETE FROM messages WHERE id = ?', [req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '删除失败' });
-    }
-    res.json({ message: '删除成功' });
-  });
+app.delete('/api/messages/:id', authenticateToken, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('messages').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '删除失败' });
+  res.json({ message: '删除成功' });
 });
 
-// 友情链接相关API
-app.get('/api/links', (req, res) => {
-  db.all('SELECT * FROM links ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: '服务器错误' });
-    }
-    res.json(rows);
-  });
+// ----- Links -----
+app.get('/api/links', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data, error } = await supabase.from('links').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: '服务器错误' });
+  res.json(data || []);
 });
 
-app.post('/api/links', authenticateToken, (req, res) => {
+app.post('/api/links', authenticateToken, async (req, res) => {
   const { name, url } = req.body;
-  db.run('INSERT INTO links (name, url) VALUES (?, ?)', [name, url],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: '创建失败' });
-      }
-      res.json({ id: this.lastID, message: '创建成功' });
-    });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { data: inserted, error } = await supabase.from('links').insert({ name: name || '', url: url || '' }).select('id').single();
+  if (error) return res.status(500).json({ error: '创建失败' });
+  res.json({ id: inserted.id, message: '创建成功' });
 });
 
-app.put('/api/links/:id', authenticateToken, (req, res) => {
+app.put('/api/links/:id', authenticateToken, async (req, res) => {
   const { name, url } = req.body;
-  db.run('UPDATE links SET name = ?, url = ? WHERE id = ?', [name, url, req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '更新失败' });
-    }
-    res.json({ message: '更新成功' });
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('links').update({ name: name || '', url: url || '' }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '更新失败' });
+  res.json({ message: '更新成功' });
+});
+
+app.delete('/api/links/:id', authenticateToken, async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: '服务器错误' });
+  const { error } = await supabase.from('links').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: '删除失败' });
+  res.json({ message: '删除成功' });
+});
+
+// 启动：先初始化默认数据，再监听
+initDefaults().then(() => {
+  app.listen(PORT, () => {
+    console.log('✅ Server running on port ' + PORT);
+    console.log('✅ 使用 Supabase 数据库 + Storage，数据持久化');
+  });
+}).catch((e) => {
+  console.error('初始化失败:', e);
+  app.listen(PORT, () => {
+    console.log('✅ Server running on port ' + PORT);
+    console.warn('⚠️  初始化默认数据失败，请检查 Supabase 配置');
   });
 });
-
-app.delete('/api/links/:id', authenticateToken, (req, res) => {
-  db.run('DELETE FROM links WHERE id = ?', [req.params.id], (err) => {
-    if (err) {
-      return res.status(500).json({ error: '删除失败' });
-    }
-    res.json({ message: '删除成功' });
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`✅ Connected to SQLite database at: ${DB_PATH}`);
-  console.log(`✅ Uploads directory: ${UPLOADS_DIR}`);
-  if (process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH) {
-    console.log('✅ 数据持久化已启用，数据将保存在持久化存储中');
-  } else {
-    console.warn('⚠️  数据持久化未启用，重启或重新部署后数据会丢失！请配置持久化磁盘并设置 DATA_DIR');
-  }
-});
-
-
